@@ -41,5 +41,11 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\lotshared\lotshared.csproj">
+      <Project>{82F46B04-7CB9-49D6-AABC-A0E87FA8914D}</Project>
+      <Name>lotshared</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

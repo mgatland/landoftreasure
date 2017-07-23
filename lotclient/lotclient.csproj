@@ -97,12 +97,22 @@
     <Folder Include="nativelibs\lib64\" />
     <Folder Include="nativelibs\osx\" />
     <Folder Include="nativelibs\win32\" />
+    <Folder Include="content\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\FNA\FNA.csproj">
       <Project>{35253CE1-C864-4CD3-8249-4D1319748E8F}</Project>
       <Name>FNA</Name>
     </ProjectReference>
+    <ProjectReference Include="..\lotshared\lotshared.csproj">
+      <Project>{82F46B04-7CB9-49D6-AABC-A0E87FA8914D}</Project>
+      <Name>lotshared</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="content\test.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 	<PropertyGroup>

@@ -1,0 +1,1 @@
+﻿UDP packets should be kept below 512 bytes of payload to avoid fragmenting, but it doesn't really matter
