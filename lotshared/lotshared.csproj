@@ -29,6 +29,8 @@
   <ItemGroup>
     <Compile Include="Player.cs" />
     <Compile Include="Packets.cs" />
+    <Compile Include="Creature.cs" />
+    <Compile Include="Shot.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thoughts.txt" />

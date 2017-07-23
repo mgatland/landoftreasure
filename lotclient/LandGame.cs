@@ -20,8 +20,11 @@ namespace lotclient
 
         SpriteBatch SpriteBatch;
         Texture2D Texture2D;
+        Texture2D creatureTexture;
 
         List<Player> players;
+        List<Creature> creatures;
+        List<Shot> shots;
 
         public LandGame()
         {
@@ -38,6 +41,8 @@ namespace lotclient
         protected override void Initialize()
         {
             players = new List<Player>();
+            creatures = new List<Creature>();
+            shots = new List<Shot>();
 
             EventBasedNetListener listener = new EventBasedNetListener();
             client = new NetManager(listener, hostKey);
@@ -55,14 +60,47 @@ namespace lotclient
                     long peerId = dataReader.GetLong();
                     int x = dataReader.GetInt();
                     int y = dataReader.GetInt();
-                    var netPlayer = players.Find(p => p.peerId == peerId);
+                    var netPlayer = players.Find(p => p.PeerId == peerId);
                     if (netPlayer == null) {
+                        Debug.WriteLine("Adding player {0}", peerId);
                         netPlayer = new Player(peerId);
                         players.Add(netPlayer);
                     }
-                    netPlayer.x = x;
-                    netPlayer.y = y;
+                    netPlayer.X = x;
+                    netPlayer.Y = y;
                 }
+                if (packetType == Packets.Creature)
+				{
+					int id = dataReader.GetInt();
+					int x = dataReader.GetInt();
+					int y = dataReader.GetInt();
+					var creature = creatures.Find(p => p.Id == id);
+					if (creature == null)
+					{
+                        Debug.WriteLine("Adding creature {0}", id);
+						creature = new Creature();
+                        creature.Id = id;
+						creatures.Add(creature);
+					}
+					creature.X = x;
+					creature.Y = y;
+				}
+				if (packetType == Packets.Shot)
+				{
+					int id = dataReader.GetInt();
+					int x = dataReader.GetInt();
+					int y = dataReader.GetInt();
+                    var shot = shots.Find(p => p.Id == id);
+					if (shot == null)
+					{
+                        Debug.WriteLine("Adding shot {0}", id);
+						shot = new Shot();
+						shot.Id = id;
+						shots.Add(shot);
+					}
+					shot.X = x;
+					shot.Y = y;
+				}
                 if (packetType==Packets.Message) {
                     Debug.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */), "");    
                 }
@@ -73,6 +111,7 @@ namespace lotclient
         protected override void LoadContent()
         {
             Texture2D = Content.Load<Texture2D>("content/test.png");
+            creatureTexture = Content.Load<Texture2D>("content/creature.png");
             base.LoadContent();
         }
 
@@ -108,7 +147,9 @@ namespace lotclient
             GraphicsDevice.Clear(Color.Cornsilk);
             if (Texture2D == null) return;
             SpriteBatch.Begin();
-            players.ForEach(p => SpriteBatch.Draw(Texture2D, new Vector2(p.x, p.y), Color.White));
+            players.ForEach(p => SpriteBatch.Draw(Texture2D, new Vector2(p.X, p.Y), Color.White));
+            creatures.ForEach(p => SpriteBatch.Draw(creatureTexture, new Vector2(p.X, p.Y), Color.White));
+            shots.ForEach(p => SpriteBatch.Draw(creatureTexture, new Vector2(p.X, p.Y), Color.Red));
             SpriteBatch.End();
             base.Draw(gameTime);
         }

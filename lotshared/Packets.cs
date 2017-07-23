@@ -6,6 +6,8 @@ namespace lotshared
         //from server
         public const byte PlayerPos = 0;
         public const byte Message = 1;
+        public const byte Creature = 2;
+        public const byte Shot = 3;
 
         //from client
         public const byte ClientMovement = 127;

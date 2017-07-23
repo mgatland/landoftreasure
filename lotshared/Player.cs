@@ -3,15 +3,15 @@ namespace lotshared
 {
     public class Player
     {
-        public int x;
-        public int y;
-        public long peerId;
+        public int X;
+        public int Y;
+        public long PeerId;
 
         public Player(long peerId)
         {
-            this.peerId = peerId;
-            this.x = 100;
-            this.y = 100;
+            this.PeerId = peerId;
+            this.X = 100;
+            this.Y = 100;
         }
     }
 }
