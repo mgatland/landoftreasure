@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using LiteNetLib;
+using LiteNetLib.Utils;
 using lotshared;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace lotclient
 {
@@ -27,6 +29,7 @@ namespace lotclient
             graphics.PreferredBackBufferWidth = 1024;
             graphics.PreferredBackBufferHeight = 768;
             graphics.IsFullScreen = false;
+            graphics.SynchronizeWithVerticalRetrace = true;
             graphics.ApplyChanges();
             this.Window.Title = "Land of Treasure";
             SpriteBatch = new SpriteBatch(GraphicsDevice);
@@ -38,12 +41,17 @@ namespace lotclient
 
             EventBasedNetListener listener = new EventBasedNetListener();
             client = new NetManager(listener, hostKey);
+			client.SimulateLatency = true;
+			client.SimulationMinLatency = Packets.SimulationMinLatency;
+            client.SimulationMaxLatency = Packets.SimulationMaxLatency;
+			//client.SimulatePacketLoss = true;
+			client.SimulationPacketLossChance = Packets.SimulationPacketLossChance;
             client.Start();
             client.Connect(host, hostPort);
             listener.NetworkReceiveEvent += (fromPeer, dataReader) =>
             {
                 byte packetType = dataReader.GetByte();
-                if (packetType==0) {
+                if (packetType == Packets.PlayerPos) {
                     long peerId = dataReader.GetLong();
                     int x = dataReader.GetInt();
                     int y = dataReader.GetInt();
@@ -55,7 +63,7 @@ namespace lotclient
                     netPlayer.x = x;
                     netPlayer.y = y;
                 }
-                if (packetType==1) {
+                if (packetType==Packets.Message) {
                     Debug.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */), "");    
                 }
             };
@@ -70,6 +78,27 @@ namespace lotclient
 
         protected override void Update(GameTime gameTime)
         {
+			KeyboardState state = Keyboard.GetState();
+			if (state.IsKeyDown(Keys.Escape))
+				Exit();
+
+            sbyte dX = 0;
+            sbyte dY = 0;
+			if (state.IsKeyDown(Keys.Right))
+				dX += 4;
+			if (state.IsKeyDown(Keys.Left))
+				dX -= 4;
+			if (state.IsKeyDown(Keys.Up))
+				dY -= 4;
+			if (state.IsKeyDown(Keys.Down))
+				dY += 4;
+
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put(Packets.ClientMovement);
+            writer.Put(dX);
+            writer.Put(dY);
+            client.GetFirstPeer().Send(writer, SendOptions.ReliableOrdered);
+
             client.PollEvents();
             base.Update(gameTime);
         }

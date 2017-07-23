@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNA", "..\FNA\FNA.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "lotshared", "lotshared\lotshared.csproj", "{82F46B04-7CB9-49D6-AABC-A0E87FA8914D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiteNetLib", "..\LiteNetLib\LiteNetLib\LiteNetLib.csproj", "{B0A014E4-0392-4E35-AA42-8FB5A40417E0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -49,5 +51,13 @@ Global
 		{82F46B04-7CB9-49D6-AABC-A0E87FA8914D}.Debug|x64.Build.0 = Debug|x64
 		{82F46B04-7CB9-49D6-AABC-A0E87FA8914D}.Release|x64.ActiveCfg = Release|x64
 		{82F46B04-7CB9-49D6-AABC-A0E87FA8914D}.Release|x64.Build.0 = Release|x64
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Debug|x86.Build.0 = Debug|Any CPU
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Release|x86.ActiveCfg = Release|Any CPU
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Release|x86.Build.0 = Release|Any CPU
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Debug|x64.Build.0 = Debug|Any CPU
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Release|x64.ActiveCfg = Release|Any CPU
+		{B0A014E4-0392-4E35-AA42-8FB5A40417E0}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

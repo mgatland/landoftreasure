@@ -30,9 +30,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="LiteNetLib">
-      <HintPath>..\packages\LiteNetLib.0.7.4.1\lib\net35\LiteNetLib.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientProgram.cs" />
@@ -40,7 +37,6 @@
     <Compile Include="LandGame.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="nativelibs\lib\libjpeg.so.62" />
     <None Include="nativelibs\lib\libmojoshader.so" />
     <None Include="nativelibs\lib\libogg.so.0" />
@@ -107,6 +103,10 @@
     <ProjectReference Include="..\lotshared\lotshared.csproj">
       <Project>{82F46B04-7CB9-49D6-AABC-A0E87FA8914D}</Project>
       <Name>lotshared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\LiteNetLib\LiteNetLib\LiteNetLib.csproj">
+      <Project>{B0A014E4-0392-4E35-AA42-8FB5A40417E0}</Project>
+      <Name>LiteNetLib</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -28,6 +28,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Player.cs" />
+    <Compile Include="Packets.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thoughts.txt" />

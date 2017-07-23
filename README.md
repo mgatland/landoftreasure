@@ -2,6 +2,6 @@
 
 ## setup
 
-Clone this project and FNA into the same parent folder.
+Clone this project, FNA and LiteNetLib into the same parent folder.
 
-Open with Visual Studio. Run landoftreasure (the server) then lotclient (the client)
+Open with Visual Studio. Run lotserver then lotclient
