@@ -132,13 +132,15 @@ namespace lotclient
 			if (state.IsKeyDown(Keys.Down))
 				dY += 4;
 
-            NetDataWriter writer = new NetDataWriter();
-            writer.Put(Packets.ClientMovement);
-            writer.Put(dX);
-            writer.Put(dY);
-            client.GetFirstPeer().Send(writer, SendOptions.ReliableOrdered);
-
-            client.PollEvents();
+            if (client.GetFirstPeer() != null)
+            {
+                NetDataWriter writer = new NetDataWriter();
+                writer.Put(Packets.ClientMovement);
+                writer.Put(dX);
+                writer.Put(dY);
+                client.GetFirstPeer().Send(writer, SendOptions.ReliableOrdered);
+                client.PollEvents();
+            }
             base.Update(gameTime);
         }
 
