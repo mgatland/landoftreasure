@@ -147,6 +147,7 @@ namespace landoftreasure
             var shot = new Shot();
             shot.X = creature.X;
             shot.Y = creature.Y;
+            shot.Id = NewId();
             shots.Add(shot);
         }
 
@@ -155,14 +156,14 @@ namespace landoftreasure
             var creature = new Creature();
             creature.X = 350;
             creature.Y = 350;
-            creature.Id = NewCreatureId();
+            creature.Id = NewId();
             creatures.Add(creature);
         }
 
         //TODO: handle this filling up
-        private int lastCreatureId;
-        private int NewCreatureId() {
-            return lastCreatureId++;
+        private int lastId;
+        private int NewId() {
+            return lastId++;
         }
     }
 }
