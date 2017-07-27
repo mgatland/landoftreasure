@@ -48,11 +48,11 @@ namespace landoftreasure
 
             listener.PeerConnectedEvent += peer =>
             {
-                Console.WriteLine("We got connection: {0}", peer.EndPoint); // Show peer ip
-                NetDataWriter writer = new NetDataWriter();                 // Create writer class
-                writer.Put(Packets.Message);
-                writer.Put("Hello client!");                                // Put some string
-                peer.Send(writer, SendOptions.ReliableOrdered);             // Send with reliability
+                Console.WriteLine("We got connection: {0}", peer.EndPoint);
+                NetDataWriter writer = new NetDataWriter();
+                writer.Put(Packets.SetPeerId);
+                writer.Put(peer.ConnectId);
+                peer.Send(writer, SendOptions.ReliableOrdered);
                 players.Add(new Player(peer.ConnectId));
                 Console.WriteLine("{0} clients", server.GetPeers().Count());
             };

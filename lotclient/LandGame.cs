@@ -22,15 +22,23 @@ namespace lotclient
         Texture2D Texture2D;
         Texture2D creatureTexture;
 
+        long peerId;
         List<Player> players;
         List<Creature> creatures;
         List<Shot> shots;
+        Player player;
+
+        private int screenWidth = 1024;
+        private int screenHeight = 768;
+
+        private int cameraX;
+        private int cameraY;
 
         public LandGame()
         {
             var graphics = new GraphicsDeviceManager(this);
-            graphics.PreferredBackBufferWidth = 1024;
-            graphics.PreferredBackBufferHeight = 768;
+            graphics.PreferredBackBufferWidth = screenWidth;
+            graphics.PreferredBackBufferHeight = screenHeight;
             graphics.IsFullScreen = false;
             graphics.SynchronizeWithVerticalRetrace = true;
             graphics.ApplyChanges();
@@ -59,6 +67,11 @@ namespace lotclient
             listener.NetworkReceiveEvent += (fromPeer, dataReader) =>
             {
                 byte packetType = dataReader.GetByte();
+                if (packetType == Packets.SetPeerId)
+                {
+                    long newPeerId = dataReader.GetLong();
+                    this.peerId = newPeerId;
+                }
                 if (packetType == Packets.PlayerPos) {
                     long peerId = dataReader.GetLong();
                     int x = dataReader.GetInt();
@@ -144,6 +157,17 @@ namespace lotclient
                 client.GetFirstPeer().Send(writer, SendOptions.ReliableOrdered);
                 client.PollEvents();
             }
+
+            if (player == null)
+            {
+                player = players.Find(p => p.PeerId == peerId);
+            }
+            if (player != null)
+            {
+                cameraX = player.X - screenWidth / 2;
+                cameraY = player.Y - screenHeight / 2;
+            }
+
             base.Update(gameTime);
         }
 
@@ -152,11 +176,16 @@ namespace lotclient
             GraphicsDevice.Clear(Color.Cornsilk);
             if (Texture2D == null) return;
             SpriteBatch.Begin();
-            players.ForEach(p => SpriteBatch.Draw(Texture2D, new Vector2(p.X, p.Y), Color.White));
-            creatures.ForEach(p => SpriteBatch.Draw(creatureTexture, new Vector2(p.X, p.Y), Color.White));
-            shots.ForEach(p => SpriteBatch.Draw(creatureTexture, new Vector2(p.X, p.Y), Color.Red));
+            players.ForEach(p => DrawSprite(Texture2D, p.X, p.Y));
+            creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));
+            shots.ForEach(p => SpriteBatch.Draw(creatureTexture, new Vector2(p.X-cameraX, p.Y-cameraY), Color.Red));
             SpriteBatch.End();
             base.Draw(gameTime);
+        }
+
+        private void DrawSprite(Texture2D texture, int x, int y)
+        {
+            SpriteBatch.Draw(texture, new Vector2(x - cameraX, y - cameraY), Color.White);
         }
 
         protected override void OnExiting(object sender, EventArgs args)
