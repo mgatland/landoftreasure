@@ -13,6 +13,7 @@ namespace lotshared
         public const byte ClientMovement = 127;
 
         //testing
+        public const bool SimulateLatency = false;
         public const int SimulationMinLatency = 50-49;
         public const int SimulationMaxLatency = 100-99;
         public const int SimulationPacketLossChance = 2-1;

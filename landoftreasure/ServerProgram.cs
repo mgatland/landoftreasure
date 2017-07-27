@@ -13,10 +13,13 @@ namespace landoftreasure
         private const int MaxClients = 20;
         private const int Port = 9050;
         private const string connectionKey = "landoftreasure";
+        private const int frameDelay = 1000 / 30;
 
         private List<Player> players;
         private List<Creature> creatures;
         List<Shot> shots;
+
+        private Random random = new Random();
 
         public static void Main(string[] args)
         {
@@ -33,11 +36,14 @@ namespace landoftreasure
 
             EventBasedNetListener listener = new EventBasedNetListener();
             NetManager server = new NetManager(listener, MaxClients, connectionKey);
-            server.SimulateLatency = true;
-            server.SimulationMinLatency = Packets.SimulationMinLatency;
-            server.SimulationMaxLatency = Packets.SimulationMaxLatency;
-            server.SimulatePacketLoss = true;
-            server.SimulationPacketLossChance = Packets.SimulationPacketLossChance;
+            if (Packets.SimulateLatency)
+            {
+                server.SimulateLatency = true;
+                server.SimulationMinLatency = Packets.SimulationMinLatency;
+                server.SimulationMaxLatency = Packets.SimulationMaxLatency;
+                server.SimulatePacketLoss = true;
+                server.SimulationPacketLossChance = Packets.SimulationPacketLossChance;
+            }
             server.Start(Port);
 
             listener.PeerConnectedEvent += peer =>
@@ -102,15 +108,17 @@ namespace landoftreasure
                 creature.Y += (int)(Math.Cos(creature.angle) * 4);
 
                 creature.timer++;
-                if (creature.timer >= 60) {
+                if (creature.timer >= 10) {
                     creature.timer = 0;
                     SpawnShot(creature);
                 }
             }
 
             foreach(var shot in shots) {
-                //shot.Y++;
+                shot.Y++;
             }
+            //delete some shots
+            shots = shots.Where(s => s.Y < 600).ToList();
 
             //network
             foreach(var creature in creatures)
@@ -139,7 +147,7 @@ namespace landoftreasure
 			}
 
             server.PollEvents();
-            Thread.Sleep(15);
+            Thread.Sleep(frameDelay);
         }
 
         private void SpawnShot(Creature creature)
@@ -154,8 +162,8 @@ namespace landoftreasure
         private void SpawnCreature()
         {
             var creature = new Creature();
-            creature.X = 350;
-            creature.Y = 350;
+            creature.X = 200 + random.Next(200);
+            creature.Y = 200 + random.Next(200);
             creature.Id = NewId();
             creatures.Add(creature);
         }

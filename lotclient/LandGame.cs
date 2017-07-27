@@ -46,11 +46,14 @@ namespace lotclient
 
             EventBasedNetListener listener = new EventBasedNetListener();
             client = new NetManager(listener, hostKey);
-			client.SimulateLatency = true;
-			client.SimulationMinLatency = Packets.SimulationMinLatency;
-            client.SimulationMaxLatency = Packets.SimulationMaxLatency;
-			//client.SimulatePacketLoss = true;
-			client.SimulationPacketLossChance = Packets.SimulationPacketLossChance;
+            if (Packets.SimulateLatency)
+            {
+                client.SimulateLatency = true;
+                client.SimulationMinLatency = Packets.SimulationMinLatency;
+                client.SimulationMaxLatency = Packets.SimulationMaxLatency;
+                client.SimulatePacketLoss = true;
+                client.SimulationPacketLossChance = Packets.SimulationPacketLossChance;
+            }
             client.Start();
             client.Connect(host, hostPort);
             listener.NetworkReceiveEvent += (fromPeer, dataReader) =>
