@@ -7,6 +7,7 @@ namespace lotshared
 		public int Y;
         public float Angle;
 		public int Id;
+        public int Age;
 
         public Shot()
         {

@@ -120,11 +120,12 @@ namespace landoftreasure
             }
 
             foreach(var shot in shots) {
+                shot.Age++;
                 shot.X += (int)(Math.Cos(shot.Angle)*10);
                 shot.Y += (int)(Math.Sin(shot.Angle)*10);
             }
             //delete some shots
-            shots = shots.Where(s => s.Y < 600).ToList();
+            shots = shots.Where(s => s.Age < 60).ToList();
 
             //network
             foreach(var creature in creatures)
