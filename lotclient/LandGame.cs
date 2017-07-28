@@ -21,6 +21,7 @@ namespace lotclient
         SpriteBatch SpriteBatch;
         Texture2D Texture2D;
         Texture2D creatureTexture;
+        Texture2D shotTexture;
 
         long peerId;
         List<Player> players;
@@ -128,6 +129,7 @@ namespace lotclient
         {
             Texture2D = Content.Load<Texture2D>("content/test.png");
             creatureTexture = Content.Load<Texture2D>("content/creature.png");
+            shotTexture = Content.Load<Texture2D>("content/shot.png");
             base.LoadContent();
         }
 
@@ -178,7 +180,7 @@ namespace lotclient
             SpriteBatch.Begin();
             players.ForEach(p => DrawSprite(Texture2D, p.X, p.Y));
             creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));
-            shots.ForEach(p => SpriteBatch.Draw(creatureTexture, new Vector2(p.X-cameraX, p.Y-cameraY), Color.Red));
+            shots.ForEach(p => SpriteBatch.Draw(shotTexture, new Vector2(p.X - cameraX, p.Y - cameraY), null, Color.White, 12f, Vector2.Zero, new Vector2(1,1), SpriteEffects.None, 0f));
             SpriteBatch.End();
             base.Draw(gameTime);
         }
