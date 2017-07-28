@@ -109,13 +109,19 @@ namespace landoftreasure
 
                 creature.timer++;
                 if (creature.timer >= 10) {
-                    creature.timer = 0;
-                    SpawnShot(creature);
+                    Player target = Shared.FindClosestPlayer(creature, players);
+                    if (target != null)
+                    {
+                        float angle = Shared.AngleFromTo(creature, target);
+                        creature.timer = 0;
+                        SpawnShot(creature, angle);
+                    }
                 }
             }
 
             foreach(var shot in shots) {
-                shot.Y++;
+                shot.X += (int)(Math.Cos(shot.Angle)*10);
+                shot.Y += (int)(Math.Sin(shot.Angle)*10);
             }
             //delete some shots
             shots = shots.Where(s => s.Y < 600).ToList();
@@ -123,38 +129,40 @@ namespace landoftreasure
             //network
             foreach(var creature in creatures)
             {
-				writer.Put(Packets.Creature);
-				writer.Put(creature.Id);
-				writer.Put(creature.X);
-				writer.Put(creature.Y);
-				foreach (var p in peers)
-				{
-					p.Send(writer, SendOptions.ReliableOrdered);
-				}
-				writer.Reset();
+                writer.Put(Packets.Creature);
+                writer.Put(creature.Id);
+                writer.Put(creature.X);
+                writer.Put(creature.Y);
+                foreach (var p in peers)
+                {
+                    p.Send(writer, SendOptions.ReliableOrdered);
+                }
+                writer.Reset();
             }
-			foreach (var shot in shots)
-			{
-				writer.Put(Packets.Shot);
-				writer.Put(shot.Id);
-				writer.Put(shot.X);
-				writer.Put(shot.Y);
-				foreach (var p in peers)
-				{
-					p.Send(writer, SendOptions.ReliableOrdered);
-				}
-				writer.Reset();
-			}
+            foreach (var shot in shots)
+            {
+                writer.Put(Packets.Shot);
+                writer.Put(shot.Id);
+                writer.Put(shot.X);
+                writer.Put(shot.Y);
+                writer.Put(shot.Angle);
+                foreach (var p in peers)
+                {
+                    p.Send(writer, SendOptions.ReliableOrdered);
+                }
+                writer.Reset();
+            }
 
             server.PollEvents();
             Thread.Sleep(frameDelay);
         }
 
-        private void SpawnShot(Creature creature)
+        private void SpawnShot(Creature creature, float angle)
         {
             var shot = new Shot();
             shot.X = creature.X;
             shot.Y = creature.Y;
+            shot.Angle = angle;
             shot.Id = NewId();
             shots.Add(shot);
         }

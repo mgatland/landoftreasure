@@ -46,6 +46,7 @@
     <Compile Include="Packets.cs" />
     <Compile Include="Creature.cs" />
     <Compile Include="Shot.cs" />
+    <Compile Include="Shared.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thoughts.txt" />

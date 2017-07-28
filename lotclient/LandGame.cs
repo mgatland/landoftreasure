@@ -105,8 +105,6 @@ namespace lotclient
 				if (packetType == Packets.Shot)
 				{
 					int id = dataReader.GetInt();
-					int x = dataReader.GetInt();
-					int y = dataReader.GetInt();
                     var shot = shots.Find(p => p.Id == id);
 					if (shot == null)
 					{
@@ -115,9 +113,10 @@ namespace lotclient
 						shot.Id = id;
 						shots.Add(shot);
 					}
-					shot.X = x;
-					shot.Y = y;
-				}
+					shot.X = dataReader.GetInt(); ;
+					shot.Y = dataReader.GetInt();
+                    shot.Angle = dataReader.GetFloat();
+                }
                 if (packetType==Packets.Message) {
                     Debug.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */), "");    
                 }
@@ -180,7 +179,7 @@ namespace lotclient
             SpriteBatch.Begin();
             players.ForEach(p => DrawSprite(Texture2D, p.X, p.Y));
             creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));
-            shots.ForEach(p => SpriteBatch.Draw(shotTexture, new Vector2(p.X - cameraX, p.Y - cameraY), null, Color.White, 12f, Vector2.Zero, new Vector2(1,1), SpriteEffects.None, 0f));
+            shots.ForEach(p => SpriteBatch.Draw(shotTexture, new Vector2(p.X - cameraX, p.Y - cameraY), null, Color.White, p.Angle, Vector2.Zero, new Vector2(1,1), SpriteEffects.None, 0f));
             SpriteBatch.End();
             base.Draw(gameTime);
         }
