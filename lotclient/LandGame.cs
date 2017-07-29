@@ -148,6 +148,7 @@ namespace lotclient
             {
                 NetDataWriter writer = new NetDataWriter();
                 writer.Put(Packets.ClientMovement);
+                writer.Put(serverTick);
                 writer.Put(dX);
                 writer.Put(dY);
                 client.GetFirstPeer().Send(writer, SendOptions.ReliableOrdered);

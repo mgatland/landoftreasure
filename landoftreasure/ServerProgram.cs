@@ -73,11 +73,10 @@ namespace landoftreasure
                 byte packetType = reader.GetByte();
                 if (packetType==Packets.ClientMovement) {
                     var player = netPlayers.Find(p => p.PeerId == peer.ConnectId);
+                    long tick = reader.GetLong();
                     sbyte x = reader.GetSByte();
                     sbyte y = reader.GetSByte();
-                    //todo: cheat prevention
-                    player.Player.X += x;
-                    player.Player.Y += y;
+                    player.MoveQueue.Add(new QueuedMove(tick, x, y));
                 }
             };
 
@@ -127,6 +126,17 @@ namespace landoftreasure
                         SpawnShot(creature, angle);
                     }
                 }
+            }
+
+            foreach(var p in netPlayers)
+            {
+                //TODO: collision checks, spread these out over updates, etc
+                foreach(var qm in p.MoveQueue)
+                {
+                    p.Player.X += qm.X;
+                    p.Player.Y += qm.Y;
+                }
+                p.MoveQueue.Clear();
             }
 
             //Remove old shots
