@@ -5,6 +5,7 @@ using LiteNetLib.Utils;
 using System.Linq;
 using System.Collections.Generic;
 using lotshared;
+using System.Diagnostics;
 
 namespace landoftreasure
 {
@@ -13,13 +14,17 @@ namespace landoftreasure
         private const int MaxClients = 20;
         private const int Port = 9050;
         private const string connectionKey = "landoftreasure";
-        private const int frameDelay = 1000 / 30;
+        private const int simulationTickRate = 1000 / 30;
+        private const int maximumLagAllowed = 1000;
 
+        private List<NetPlayer> netPlayers;
         private List<Player> players;
         private List<Creature> creatures;
         List<Shot> shots;
 
         private Random random = new Random();
+        private Stopwatch stopwatch = new Stopwatch();
+        private long lastStep = 0;
 
         public static void Main(string[] args)
         {
@@ -30,6 +35,8 @@ namespace landoftreasure
         {
             Console.WriteLine("Starting game server…");
 
+            stopwatch.Start();
+            netPlayers = new List<NetPlayer>();
             players = new List<Player>();
             creatures = new List<Creature>();
             shots = new List<Shot>();
@@ -50,10 +57,14 @@ namespace landoftreasure
             {
                 Console.WriteLine("We got connection: {0}", peer.EndPoint);
                 NetDataWriter writer = new NetDataWriter();
-                writer.Put(Packets.SetPeerId);
+                writer.Put(Packets.WelcomeClient);
                 writer.Put(peer.ConnectId);
+                writer.Put(lastStep);
                 peer.Send(writer, SendOptions.ReliableOrdered);
-                players.Add(new Player(peer.ConnectId));
+                var netPlayer = new NetPlayer(peer.ConnectId, peer);
+                netPlayer.Player = new Player(peer.ConnectId);
+                netPlayers.Add(netPlayer);
+                players.Add(netPlayer.Player);
                 Console.WriteLine("{0} clients", server.GetPeers().Count());
             };
 
@@ -61,18 +72,29 @@ namespace landoftreasure
             {
                 byte packetType = reader.GetByte();
                 if (packetType==Packets.ClientMovement) {
-                    var player = players.Find(p => p.PeerId == peer.ConnectId);
+                    var player = netPlayers.Find(p => p.PeerId == peer.ConnectId);
                     sbyte x = reader.GetSByte();
                     sbyte y = reader.GetSByte();
-                    //todo: cheap prevention
-                    player.X += x;
-                    player.Y += y;
+                    //todo: cheat prevention
+                    player.Player.X += x;
+                    player.Player.Y += y;
                 }
             };
 
             while (!Console.KeyAvailable)
             {
-                Update(server);
+                long elapsed = stopwatch.ElapsedMilliseconds;
+                while (elapsed > lastStep + simulationTickRate)
+                {
+                    Update(server);
+                    lastStep = lastStep + simulationTickRate;
+                }
+                long postUpdateElapsed = stopwatch.ElapsedMilliseconds;
+                int earlyAmount = (int)(lastStep + simulationTickRate - postUpdateElapsed);
+                if (earlyAmount > 2)
+                {
+                    Thread.Sleep(earlyAmount - 2);
+                }
             }
 
             server.Stop();
@@ -82,33 +104,21 @@ namespace landoftreasure
         {
             var peers = server.GetPeers();
             NetDataWriter writer = new NetDataWriter();
-            foreach (var player in players)
-            {
-                writer.Put(Packets.PlayerPos);
-                writer.Put(player.PeerId);
-                writer.Put(player.X);
-                writer.Put(player.Y);
-                foreach (var p in peers)
-                {
-                    p.Send(writer, SendOptions.ReliableOrdered);
-                }
-                writer.Reset();
-            }
-
-            if (creatures.Count < 5)
+            if (creatures.Count < 1)
             {
                 SpawnCreature();
             }
             foreach (var creature in creatures)
             {
-                creature.angle += 0.01f;
+                creature.angle += 0.09f;
                 if (creature.angle > Math.PI * 2) creature.angle -= (float)(Math.PI * 2);
 
-                creature.X += (int)(Math.Sin(creature.angle) * 4);
-                creature.Y += (int)(Math.Cos(creature.angle) * 4);
+                creature.X += (int)(Math.Sin(creature.angle) * 16);
+                creature.Y += (int)(Math.Cos(creature.angle) * 16);
 
                 creature.timer++;
-                if (creature.timer >= 10) {
+                if (creature.timer >= 60)
+                {
                     Player target = Shared.FindClosestPlayer(creature, players);
                     if (target != null)
                     {
@@ -119,43 +129,66 @@ namespace landoftreasure
                 }
             }
 
-            foreach(var shot in shots) {
-                shot.Age++;
-                shot.X += (int)(Math.Cos(shot.Angle)*10);
-                shot.Y += (int)(Math.Sin(shot.Angle)*10);
-            }
-            //delete some shots
-            shots = shots.Where(s => s.Age < 60).ToList();
+            //Remove old shots
+            shots.RemoveAll(s => s.IsDead(lastStep, maximumLagAllowed));
 
-            //network
-            foreach(var creature in creatures)
-            {
-                writer.Put(Packets.Creature);
-                writer.Put(creature.Id);
-                writer.Put(creature.X);
-                writer.Put(creature.Y);
-                foreach (var p in peers)
-                {
-                    p.Send(writer, SendOptions.ReliableOrdered);
-                }
-                writer.Reset();
-            }
-            foreach (var shot in shots)
-            {
-                writer.Put(Packets.Shot);
-                writer.Put(shot.Id);
-                writer.Put(shot.X);
-                writer.Put(shot.Y);
-                writer.Put(shot.Angle);
-                foreach (var p in peers)
-                {
-                    p.Send(writer, SendOptions.ReliableOrdered);
-                }
-                writer.Reset();
-            }
+            SendSnapshotUpdates(writer);
+            SendShotUpdates(writer);
 
             server.PollEvents();
-            Thread.Sleep(frameDelay);
+        }
+
+        private void SendSnapshotUpdates(NetDataWriter writer)
+        {
+            foreach (var p in netPlayers)
+            {
+                Snapshot snapshot = new Snapshot();
+                snapshot.Timestamp = lastStep;
+                foreach (var creature in creatures)
+                {
+                    snapshot.Creatures.Add(creature.Id, creature);
+                }
+                foreach (var player in players)
+                {
+                    snapshot.Players.Add(player.Id, player);
+                }
+                snapshot.Serialize(writer);
+            p.Peer.Send(writer, SendOptions.Sequenced);
+            writer.Reset();
+            }
+        }
+
+        private void SendShotUpdates(NetDataWriter writer)
+        {
+            //Send shot updates
+            foreach (var p in netPlayers)
+            {
+                //Which shots have changed since the last update?
+                List<Shot> shotsToSend = new List<Shot>();
+                foreach (var shot in shots)
+                {
+                    if (!p.ShotKnowledge.ContainsKey(shot.Id) || p.ShotKnowledge[shot.Id] < shot.DirtyTime)
+                    {
+                        p.ShotKnowledge[shot.Id] = shot.DirtyTime;
+                        shotsToSend.Add(shot);
+                    }
+                }
+                foreach (var shot in shotsToSend)
+                {
+                    writer.Put(Packets.Shot);
+                    writer.Put(shot.Id);
+                    writer.Put(shot.SpawnTime);
+                    writer.Put(shot.X);
+                    writer.Put(shot.Y);
+                    writer.Put(shot.Angle);
+                    p.Peer.Send(writer, SendOptions.ReliableOrdered);
+                    writer.Reset();
+                }
+                if (shotsToSend.Count > 0)
+                {
+                    Debug.WriteLine("Sending client " + shotsToSend.Count + " new shots");
+                }
+            }
         }
 
         private void SpawnShot(Creature creature, float angle)
@@ -165,14 +198,15 @@ namespace landoftreasure
             shot.Y = creature.Y;
             shot.Angle = angle;
             shot.Id = NewId();
+            shot.SpawnTime = lastStep;
             shots.Add(shot);
         }
 
         private void SpawnCreature()
         {
             var creature = new Creature();
-            creature.X = 200 + random.Next(200);
-            creature.Y = 200 + random.Next(200);
+            creature.X = 0 + random.Next(20);
+            creature.Y = 0 + random.Next(20);
             creature.Id = NewId();
             creatures.Add(creature);
         }

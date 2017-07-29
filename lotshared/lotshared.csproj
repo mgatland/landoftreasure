@@ -47,9 +47,16 @@
     <Compile Include="Creature.cs" />
     <Compile Include="Shot.cs" />
     <Compile Include="Shared.cs" />
+    <Compile Include="Snapshot.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thoughts.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\LiteNetLib\LiteNetLib\LiteNetLib.csproj">
+      <Project>{b0a014e4-0392-4e35-aa42-8fb5a40417e0}</Project>
+      <Name>LiteNetLib</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

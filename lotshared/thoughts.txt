@@ -1,1 +1,23 @@
 ﻿UDP packets should be kept below 512 bytes of payload to avoid fragmenting, but it doesn't really matter
+
+ROTMG weapon\projectile stats:
+size
+particle trail (color, lifetime)
+speed
+lifetime
+Complex motion:
+	amplitude
+	frequency
+	booleans which override the above: wavy, parametric
+firing:
+  amount of projectiles
+  arc gap between each
+flags:
+  multihit
+  armour piercing?
+  ignores obstacles
+
+Enemies can fire: straight at players, or prediction-aimed
+
+
+http://www.pfiffel.com/dps/

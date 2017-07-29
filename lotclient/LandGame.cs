@@ -16,6 +16,9 @@ namespace lotclient
 		private const int hostPort = 9050;
 		private const string hostKey = "landoftreasure";
 
+        private const int desiredExtraDelay = 100;
+        private int extraDelay = desiredExtraDelay;
+
         NetManager client;
 
         SpriteBatch SpriteBatch;
@@ -25,6 +28,7 @@ namespace lotclient
 
         long peerId;
         List<Player> players;
+        List<Snapshot> snapshots = new List<Snapshot>();
         List<Creature> creatures;
         List<Shot> shots;
         Player player;
@@ -34,6 +38,9 @@ namespace lotclient
 
         private int cameraX;
         private int cameraY;
+
+        private Stopwatch stopwatch = new Stopwatch();
+        private long serverStartTick;
 
         public LandGame()
         {
@@ -68,39 +75,16 @@ namespace lotclient
             listener.NetworkReceiveEvent += (fromPeer, dataReader) =>
             {
                 byte packetType = dataReader.GetByte();
-                if (packetType == Packets.SetPeerId)
+                if (packetType == Packets.WelcomeClient)
                 {
-                    long newPeerId = dataReader.GetLong();
-                    this.peerId = newPeerId;
+                    this.peerId = dataReader.GetLong();
+                    serverStartTick = dataReader.GetLong();
+                    stopwatch.Restart();
                 }
-                if (packetType == Packets.PlayerPos) {
-                    long peerId = dataReader.GetLong();
-                    int x = dataReader.GetInt();
-                    int y = dataReader.GetInt();
-                    var netPlayer = players.Find(p => p.PeerId == peerId);
-                    if (netPlayer == null) {
-                        Debug.WriteLine("Adding player {0}", peerId);
-                        netPlayer = new Player(peerId);
-                        players.Add(netPlayer);
-                    }
-                    netPlayer.X = x;
-                    netPlayer.Y = y;
-                }
-                if (packetType == Packets.Creature)
+                if (packetType == Packets.Snapshot)
 				{
-					int id = dataReader.GetInt();
-					int x = dataReader.GetInt();
-					int y = dataReader.GetInt();
-					var creature = creatures.Find(p => p.Id == id);
-					if (creature == null)
-					{
-                        Debug.WriteLine("Adding creature {0}", id);
-						creature = new Creature();
-                        creature.Id = id;
-						creatures.Add(creature);
-					}
-					creature.X = x;
-					creature.Y = y;
+                    snapshots.Add(Snapshot.Deserialize(dataReader));
+
 				}
 				if (packetType == Packets.Shot)
 				{
@@ -113,7 +97,8 @@ namespace lotclient
 						shot.Id = id;
 						shots.Add(shot);
 					}
-					shot.X = dataReader.GetInt(); ;
+                    shot.SpawnTime = dataReader.GetLong();
+					shot.X = dataReader.GetInt();
 					shot.Y = dataReader.GetInt();
                     shot.Angle = dataReader.GetFloat();
                 }
@@ -122,6 +107,14 @@ namespace lotclient
                 }
             };
             base.Initialize();
+        }
+
+
+        //servertick is server frame we are trying to display.
+        //It should be 1 or 2 frames behind the latest server frame we have recieved
+        private long calculateServerTick()
+        {
+            return serverStartTick + stopwatch.ElapsedMilliseconds + extraDelay;
         }
 
         protected override void LoadContent()
@@ -134,7 +127,9 @@ namespace lotclient
 
         protected override void Update(GameTime gameTime)
         {
-			KeyboardState state = Keyboard.GetState();
+            long serverTick = calculateServerTick();
+
+            KeyboardState state = Keyboard.GetState();
 			if (state.IsKeyDown(Keys.Escape))
 				Exit();
 
@@ -161,13 +156,75 @@ namespace lotclient
 
             if (player == null)
             {
-                player = players.Find(p => p.PeerId == peerId);
+                player = players.Find(p => p.Id == peerId);
             }
+
+            //blend between two snapshots
+            var nextSnapIndex = snapshots.FindIndex(shot => shot.Timestamp >= serverTick);
+            if (nextSnapIndex >= 0)
+            {
+                var lastSnapIndex = nextSnapIndex - 1;
+                if (lastSnapIndex >= 0)
+                {
+                    var lastSnap = snapshots[lastSnapIndex];
+                    var nextSnap = snapshots[nextSnapIndex];
+                    int timeSpan = (int)(nextSnap.Timestamp - lastSnap.Timestamp);
+                    float newAmount = (serverTick - lastSnap.Timestamp) / 1f / timeSpan;
+                    float oldAmount = 1f - newAmount;
+                    foreach (var c in lastSnap.Creatures.Values)
+                    {
+                        var creature = creatures.Find(p => p.Id == c.Id);
+                        if (creature == null)
+                        {
+                            Debug.WriteLine("Adding creature {0}", c.Id);
+                            creature = new Creature();
+                            creature.Id = c.Id;
+                            creatures.Add(creature);
+                        }
+                        var cNext = nextSnap.Creatures.ContainsKey(c.Id) ? nextSnap.Creatures[c.Id] : c;
+                        creature.X = (int)Math.Round(c.X * oldAmount + cNext.X * newAmount);
+                        creature.Y = (int)Math.Round(c.Y * oldAmount + cNext.Y * newAmount);
+                    }
+                    foreach (var p in lastSnap.Players.Values)
+                    {
+                        var player = players.Find(o => o.Id == p.Id);
+                        if (player == null)
+                        {
+                            Debug.WriteLine("Adding player {0}", p.Id);
+                            player = new Player(p.Id);
+                            players.Add(player);
+                        }
+                        var cNext = nextSnap.Players.ContainsKey(p.Id) ? nextSnap.Players[p.Id] : p;
+                        player.X = (int)Math.Round(p.X * oldAmount + cNext.X * newAmount);
+                        player.Y = (int)Math.Round(p.Y * oldAmount + cNext.Y * newAmount);
+                    }
+
+                    //Remove stale snapshots
+                    snapshots.RemoveRange(0, lastSnapIndex);
+                }
+            }
+            if ((snapshots.Count > 2 && nextSnapIndex < 0) || (snapshots.Count < 3 && stopwatch.ElapsedMilliseconds > 1000))
+            {
+                //If there are snaps but we're not picking one, we must think we're in the future.
+                //OR: if there are not many snapshots, that indicates we are too close to the present
+                //(except at the start of the game)
+                serverStartTick -= 10;
+                Console.WriteLine("We got ahead of the server, wait 10ms");
+            }
+            if (snapshots.Count > 10 && nextSnapIndex >= 0)
+            {
+                Console.WriteLine("We got behind the server, jump ahead 10ms");
+                serverStartTick += 10;
+            }
+
             if (player != null)
             {
                 cameraX = player.X - screenWidth / 2;
                 cameraY = player.Y - screenHeight / 2;
             }
+
+            Shared.UpdateShots(shots, serverTick);
+            shots.RemoveAll(s => s.IsDead(serverTick, 0));
 
             base.Update(gameTime);
         }
@@ -179,14 +236,14 @@ namespace lotclient
             SpriteBatch.Begin();
             players.ForEach(p => DrawSprite(Texture2D, p.X, p.Y));
             creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));
-            shots.ForEach(p => SpriteBatch.Draw(shotTexture, new Vector2(p.X - cameraX, p.Y - cameraY), null, Color.White, p.Angle, Vector2.Zero, new Vector2(1,1), SpriteEffects.None, 0f));
+            shots.ForEach(p => { if (p.ShotFrame.Active) SpriteBatch.Draw(shotTexture, new Vector2(p.ShotFrame.X - cameraX, p.ShotFrame.Y - cameraY), null, Color.White, p.Angle, new Vector2(32, 8), new Vector2(1, 1), SpriteEffects.None, 0f); });
             SpriteBatch.End();
             base.Draw(gameTime);
         }
 
         private void DrawSprite(Texture2D texture, int x, int y)
         {
-            SpriteBatch.Draw(texture, new Vector2(x - cameraX, y - cameraY), Color.White);
+            SpriteBatch.Draw(texture, new Vector2(x - cameraX, y - cameraY), null, Color.White, 0f, new Vector2(texture.Width/2,texture.Height/2), 1f, SpriteEffects.None, 0f);
         }
 
         protected override void OnExiting(object sender, EventArgs args)

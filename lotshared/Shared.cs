@@ -30,5 +30,13 @@ namespace lotshared
             float yDiff = p.Y - c.Y;
             return (float)Math.Atan2(yDiff, xDiff);
         }
+
+        public static void UpdateShots(List<Shot> shots, long time)
+        {
+            foreach (var shot in shots)
+            {
+                shot.Update(time);
+            }
+        }
     }
 }
