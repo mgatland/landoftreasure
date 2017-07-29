@@ -85,7 +85,7 @@ namespace landoftreasure
 							int tick = reader.GetInt();
 							sbyte x = reader.GetSByte();
 							sbyte y = reader.GetSByte();
-                            if (!player.MoveQueue.Any(qm => qm.Tick == tick)) {
+                            if (tick > player.LastAckedMove && !player.MoveQueue.Any(qm => qm.Tick == tick)) {
 								player.MoveQueue.Add(new QueuedMove(tick, x, y));
 								//Console.WriteLine("Client Move: " + tick + " vs real time " + lastStep + " with " + count + " move snapshots");
 								//Console.WriteLine("Move lag: " + (lastStep - tick));
@@ -195,7 +195,7 @@ namespace landoftreasure
                     snapshot.Players.Add(player.Id, player);
                 }
                 snapshot.Serialize(writer);
-            p.Peer.Send(writer, SendOptions.Sequenced);
+                p.Peer.Send(writer, SendOptions.Unreliable);
             writer.Reset();
             }
         }

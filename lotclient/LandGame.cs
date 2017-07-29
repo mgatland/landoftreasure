@@ -32,6 +32,7 @@ namespace lotclient
 
         List<Player> players;
         List<Snapshot> snapshots = new List<Snapshot>();
+        private long latestSnapshotTimestamp = -1;
         List<Creature> creatures;
         List<Shot> shots;
         Player player;
@@ -87,9 +88,14 @@ namespace lotclient
                 if (packetType == Packets.Snapshot)
 				{
                     var snapshot = Snapshot.Deserialize(dataReader);
-                    snapshots.Add(snapshot);
-                    //immediately process the ack
-                    ProcessClientMovementAck(snapshot.LastAckedClientMove);
+                    //check it's not a duplicate, or stale
+                    if (snapshot.Timestamp > latestSnapshotTimestamp)
+                    {
+                        latestSnapshotTimestamp = snapshot.Timestamp;
+						snapshots.Add(snapshot);
+						//immediately process the ack
+						ProcessClientMovementAck(snapshot.LastAckedClientMove);   
+                    }
 				}
 				if (packetType == Packets.Shot)
 				{
@@ -157,7 +163,6 @@ namespace lotclient
             //TODO: check the serverTick hasn't gone backwards
             //(which might happen if we do weird synchronisation)
             queuedMoves.Add(new QueuedMove(serverTick, dX, dY));
-            Console.WriteLine(queuedMoves.Count);
 
             if (client.GetFirstPeer() != null)
             {
@@ -171,7 +176,7 @@ namespace lotclient
                     writer.Put(qm.X);
                     writer.Put(qm.Y);
                 }
-                client.GetFirstPeer().Send(writer, SendOptions.Sequenced);
+                client.GetFirstPeer().Send(writer, SendOptions.Unreliable);
                 client.PollEvents();
             }
 
