@@ -17,6 +17,7 @@ namespace lotclient
 		private const string hostKey = "landoftreasure";
 
         private const int desiredExtraDelay = 100;
+        private const int maxQueuedMovestoSend = 20;
         private int extraDelay = desiredExtraDelay;
 
         NetManager client;
@@ -27,6 +28,8 @@ namespace lotclient
         Texture2D shotTexture;
 
         int Id;
+        List<QueuedMove> queuedMoves = new List<QueuedMove>();
+
         List<Player> players;
         List<Snapshot> snapshots = new List<Snapshot>();
         List<Creature> creatures;
@@ -67,7 +70,7 @@ namespace lotclient
                 client.SimulateLatency = true;
                 client.SimulationMinLatency = Packets.SimulationMinLatency;
                 client.SimulationMaxLatency = Packets.SimulationMaxLatency;
-                client.SimulatePacketLoss = true;
+                client.SimulatePacketLoss = Packets.SimulatePacketLoss;
                 client.SimulationPacketLossChance = Packets.SimulationPacketLossChance;
             }
             client.Start();
@@ -83,8 +86,10 @@ namespace lotclient
                 }
                 if (packetType == Packets.Snapshot)
 				{
-                    snapshots.Add(Snapshot.Deserialize(dataReader));
-
+                    var snapshot = Snapshot.Deserialize(dataReader);
+                    snapshots.Add(snapshot);
+                    //immediately process the ack
+                    ProcessClientMovementAck(snapshot.LastAckedClientMove);
 				}
 				if (packetType == Packets.Shot)
 				{
@@ -107,6 +112,11 @@ namespace lotclient
                 }
             };
             base.Initialize();
+        }
+
+        private void ProcessClientMovementAck(long lastAckedClientMove)
+        {
+            queuedMoves.RemoveAll(qm => qm.Tick <= lastAckedClientMove);
         }
 
 
@@ -144,14 +154,24 @@ namespace lotclient
 			if (state.IsKeyDown(Keys.Down))
 				dY += 4;
 
+            //TODO: check the serverTick hasn't gone backwards
+            //(which might happen if we do weird synchronisation)
+            queuedMoves.Add(new QueuedMove(serverTick, dX, dY));
+            Console.WriteLine(queuedMoves.Count);
+
             if (client.GetFirstPeer() != null)
             {
                 NetDataWriter writer = new NetDataWriter();
                 writer.Put(Packets.ClientMovement);
-                writer.Put(serverTick);
-                writer.Put(dX);
-                writer.Put(dY);
-                client.GetFirstPeer().Send(writer, SendOptions.ReliableOrdered);
+                var count = Math.Min(queuedMoves.Count, maxQueuedMovestoSend);
+                writer.Put(count);
+                for (var i = 0; i < count; i++) {
+                    var qm = queuedMoves[i];
+                    writer.Put(qm.Tick);
+                    writer.Put(qm.X);
+                    writer.Put(qm.Y);
+                }
+                client.GetFirstPeer().Send(writer, SendOptions.Sequenced);
                 client.PollEvents();
             }
 

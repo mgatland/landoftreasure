@@ -17,6 +17,7 @@ namespace lotshared
         public const bool SimulateLatency = true;
         public const int SimulationMinLatency = 200;
         public const int SimulationMaxLatency = 250;
+        public const bool SimulatePacketLoss = true;
         public const int SimulationPacketLossChance = 1;
 
         public Packets()

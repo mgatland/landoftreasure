@@ -14,6 +14,7 @@ namespace lotshared
     public class Snapshot
     {
         public long Timestamp;
+        public long LastAckedClientMove;
         public Dictionary<int, Creature> Creatures = new Dictionary<int, Creature>();
         public Dictionary<long, Player> Players = new Dictionary<long, Player>();
 
@@ -21,6 +22,7 @@ namespace lotshared
         {
             writer.Put(Packets.Snapshot);
             writer.Put(Timestamp);
+            writer.Put(LastAckedClientMove);
             writer.Put(Creatures.Count);
             writer.Put(Players.Count);
             foreach (var c in Creatures.Values)
@@ -41,6 +43,7 @@ namespace lotshared
         {
             Snapshot snapshot = new Snapshot();
             snapshot.Timestamp = reader.GetLong();
+            snapshot.LastAckedClientMove = reader.GetLong();
             int cCount = reader.GetInt();
             int pCount = reader.GetInt();
             for (var i = 0; i < cCount; i++)

@@ -48,6 +48,7 @@
     <Compile Include="Shot.cs" />
     <Compile Include="Shared.cs" />
     <Compile Include="Snapshot.cs" />
+    <Compile Include="QueuedMove.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thoughts.txt" />

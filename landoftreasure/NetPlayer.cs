@@ -14,6 +14,7 @@ namespace landoftreasure
         public Dictionary<int, long> ShotKnowledge = new Dictionary<int, long>(); //shot ID, last update
         public List<QueuedMove> MoveQueue = new List<QueuedMove>();
         public LiteNetLib.NetPeer Peer;
+        public long LastAckedMove;
 
         public NetPlayer(long peerId, LiteNetLib.NetPeer peer)
         {

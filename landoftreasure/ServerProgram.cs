@@ -16,6 +16,7 @@ namespace landoftreasure
         private const string connectionKey = "landoftreasure";
         private const int simulationTickRate = 1000 / 30;
         private const int maximumLagAllowed = 1000;
+        private const int playerReplayLag = 500;
 
         private List<NetPlayer> netPlayers;
         private List<Player> players;
@@ -48,7 +49,7 @@ namespace landoftreasure
                 server.SimulateLatency = true;
                 server.SimulationMinLatency = Packets.SimulationMinLatency;
                 server.SimulationMaxLatency = Packets.SimulationMaxLatency;
-                server.SimulatePacketLoss = true;
+                server.SimulatePacketLoss = Packets.SimulatePacketLoss;
                 server.SimulationPacketLossChance = Packets.SimulationPacketLossChance;
             }
             server.Start(Port);
@@ -79,10 +80,22 @@ namespace landoftreasure
                     }
                     else
                     {
-                        long tick = reader.GetLong();
-                        sbyte x = reader.GetSByte();
-                        sbyte y = reader.GetSByte();
-                        player.MoveQueue.Add(new QueuedMove(tick, x, y));
+                        var count = reader.GetInt();
+                        for (var i = 0; i < count; i++) {
+							int tick = reader.GetInt();
+							sbyte x = reader.GetSByte();
+							sbyte y = reader.GetSByte();
+                            if (!player.MoveQueue.Any(qm => qm.Tick == tick)) {
+								player.MoveQueue.Add(new QueuedMove(tick, x, y));
+								//Console.WriteLine("Client Move: " + tick + " vs real time " + lastStep + " with " + count + " move snapshots");
+								//Console.WriteLine("Move lag: " + (lastStep - tick));
+							}
+							if (i == count - 1 && player.LastAckedMove < tick)
+							{
+								player.LastAckedMove = tick;
+							}
+                        }
+
                     }
                 }
             };
@@ -105,6 +118,7 @@ namespace landoftreasure
 
             server.Stop();
         }
+
 
         private void Update(NetManager server)
         {
@@ -137,13 +151,23 @@ namespace landoftreasure
 
             foreach(var p in netPlayers)
             {
-                //TODO: collision checks, spread these out over updates, etc
-                foreach(var qm in p.MoveQueue)
+                //TODO: Collision checks happen in the client's time\reality
+                //TODO: if the player is too far behind, we insert fake movement
+                //  (just standing still) and collision check off that
+
+                //Process any movement that is sufficiently old
+                Console.WriteLine(p.MoveQueue.Count);
+                while (p.MoveQueue.Count > 0)
                 {
-                    p.Player.X += qm.X;
-                    p.Player.Y += qm.Y;
+                    var first = p.MoveQueue[0];
+                    if (first.Tick < lastStep - playerReplayLag) {
+						p.Player.X += first.X;
+						p.Player.Y += first.Y;
+                        p.MoveQueue.RemoveAt(0);
+                    } else {
+                        break;
+                    }
                 }
-                p.MoveQueue.Clear();
             }
 
             //Remove old shots
@@ -161,6 +185,7 @@ namespace landoftreasure
             {
                 Snapshot snapshot = new Snapshot();
                 snapshot.Timestamp = lastStep;
+                snapshot.LastAckedClientMove = p.LastAckedMove;
                 foreach (var creature in creatures)
                 {
                     snapshot.Creatures.Add(creature.Id, creature);
