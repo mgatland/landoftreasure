@@ -53,7 +53,7 @@ namespace lotshared
             }
             for (var i = 0; i < pCount; i++)
             {
-                Player p = new Player(reader.GetLong());
+                Player p = new Player(reader.GetInt());
                 p.X = reader.GetInt();
                 p.Y = reader.GetInt();
                 snapshot.Players.Add(p.Id, p);

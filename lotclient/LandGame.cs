@@ -26,7 +26,7 @@ namespace lotclient
         Texture2D creatureTexture;
         Texture2D shotTexture;
 
-        long peerId;
+        int Id;
         List<Player> players;
         List<Snapshot> snapshots = new List<Snapshot>();
         List<Creature> creatures;
@@ -77,7 +77,7 @@ namespace lotclient
                 byte packetType = dataReader.GetByte();
                 if (packetType == Packets.WelcomeClient)
                 {
-                    this.peerId = dataReader.GetLong();
+                    this.Id = dataReader.GetInt();
                     serverStartTick = dataReader.GetLong();
                     stopwatch.Restart();
                 }
@@ -157,7 +157,7 @@ namespace lotclient
 
             if (player == null)
             {
-                player = players.Find(p => p.Id == peerId);
+                player = players.Find(p => p.Id == Id);
             }
 
             //blend between two snapshots

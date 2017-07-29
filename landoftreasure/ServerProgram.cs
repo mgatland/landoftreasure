@@ -56,16 +56,16 @@ namespace landoftreasure
             listener.PeerConnectedEvent += peer =>
             {
                 Console.WriteLine("We got connection: {0}", peer.EndPoint);
-                NetDataWriter writer = new NetDataWriter();
-                writer.Put(Packets.WelcomeClient);
-                writer.Put(peer.ConnectId);
-                writer.Put(lastStep);
-                peer.Send(writer, SendOptions.ReliableOrdered);
                 var netPlayer = new NetPlayer(peer.ConnectId, peer);
-                netPlayer.Player = new Player(peer.ConnectId);
+                netPlayer.Player = new Player(NewPlayerId());
                 netPlayers.Add(netPlayer);
                 players.Add(netPlayer.Player);
                 Console.WriteLine("{0} clients", server.GetPeers().Count());
+				NetDataWriter writer = new NetDataWriter();
+				writer.Put(Packets.WelcomeClient);
+                writer.Put(netPlayer.Player.Id);
+				writer.Put(lastStep);
+				peer.Send(writer, SendOptions.ReliableOrdered);
             };
 
             listener.NetworkReceiveEvent += (peer, reader) => 
@@ -73,10 +73,17 @@ namespace landoftreasure
                 byte packetType = reader.GetByte();
                 if (packetType==Packets.ClientMovement) {
                     var player = netPlayers.Find(p => p.PeerId == peer.ConnectId);
-                    long tick = reader.GetLong();
-                    sbyte x = reader.GetSByte();
-                    sbyte y = reader.GetSByte();
-                    player.MoveQueue.Add(new QueuedMove(tick, x, y));
+                    if (player == null)
+                    {
+                        Console.WriteLine("Peer tried to move but has no associated NetPlayer");
+                    }
+                    else
+                    {
+                        long tick = reader.GetLong();
+                        sbyte x = reader.GetSByte();
+                        sbyte y = reader.GetSByte();
+                        player.MoveQueue.Add(new QueuedMove(tick, x, y));
+                    }
                 }
             };
 
@@ -207,7 +214,7 @@ namespace landoftreasure
             shot.X = creature.X;
             shot.Y = creature.Y;
             shot.Angle = angle;
-            shot.Id = NewId();
+            shot.Id = NewShotId();
             shot.SpawnTime = lastStep;
             shots.Add(shot);
         }
@@ -217,14 +224,24 @@ namespace landoftreasure
             var creature = new Creature();
             creature.X = 0 + random.Next(20);
             creature.Y = 0 + random.Next(20);
-            creature.Id = NewId();
+            creature.Id = NewCreatureId();
             creatures.Add(creature);
         }
 
-        //TODO: handle this filling up
-        private int lastId;
-        private int NewId() {
-            return lastId++;
+        //TODO: handle these filling up
+        private int lastShotId;
+        private int NewShotId() {
+            return lastShotId++;
         }
+		private int lastCreatureId;
+		private int NewCreatureId()
+		{
+			return lastCreatureId++;
+		}
+		private int lastPlayerId;
+		private int NewPlayerId()
+		{
+			return lastPlayerId++;
+		}
     }
 }

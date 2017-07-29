@@ -5,11 +5,11 @@ namespace lotshared
     {
         public int X;
         public int Y;
-        public long Id;
+        public int Id;
 
-        public Player(long peerId)
+        public Player(int id)
         {
-            this.Id = peerId;
+            this.Id = id;
             this.X = 100;
             this.Y = 100;
         }
