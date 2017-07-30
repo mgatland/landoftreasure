@@ -1,6 +1,16 @@
-﻿UDP packets should be kept below 512 bytes of payload to avoid fragmenting, but it doesn't really matter
+﻿
+To Do:
+
+* player-projectile collisions
+* simulate local player movement
+* player attacks, killing enemies, syncing this
+
+Notes:
+
+UDP packets should be kept below 512 bytes of payload to avoid fragmenting, but it doesn't really matter
 
 ROTMG weapon\projectile stats:
+sprite
 size
 particle trail (color, lifetime)
 speed
