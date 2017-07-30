@@ -16,7 +16,7 @@ namespace landoftreasure
         private const string connectionKey = "landoftreasure";
         private const int simulationTickRate = 1000 / 30;
         private const int maximumLagAllowed = 1000;
-        private const int playerReplayLag = 500;
+        private const int playerReplayLag = maximumLagAllowed; //probably must be tuned per player based on their lag
 
         private List<NetPlayer> netPlayers;
         private List<Player> players;
@@ -80,10 +80,12 @@ namespace landoftreasure
                     }
                     else
                     {
+                        //Console.Write("Getting moveticks ");
                         var count = reader.GetInt();
+                        long tick = reader.GetLong();
                         for (var i = 0; i < count; i++) {
-							int tick = reader.GetInt();
-							sbyte x = reader.GetSByte();
+							tick += reader.GetInt(); //delta
+                            sbyte x = reader.GetSByte();
 							sbyte y = reader.GetSByte();
                             if (tick > player.LastAckedMove && !player.MoveQueue.Any(qm => qm.Tick == tick)) {
 								player.MoveQueue.Add(new QueuedMove(tick, x, y));
@@ -92,9 +94,11 @@ namespace landoftreasure
 							}
 							if (i == count - 1 && player.LastAckedMove < tick)
 							{
-								player.LastAckedMove = tick;
+                                player.LastAckedMove = tick;
+								player.RecordLatency((int)(lastStep - tick));
 							}
                         }
+                        //Console.WriteLine();
 
                     }
                 }
@@ -156,14 +160,15 @@ namespace landoftreasure
                 //  (just standing still) and collision check off that
 
                 //Process any movement that is sufficiently old
-                Console.WriteLine(p.MoveQueue.Count);
                 while (p.MoveQueue.Count > 0)
                 {
+                    int count = 0;
                     var first = p.MoveQueue[0];
                     if (first.Tick < lastStep - playerReplayLag) {
 						p.Player.X += first.X;
 						p.Player.Y += first.Y;
                         p.MoveQueue.RemoveAt(0);
+                        count++;
                     } else {
                         break;
                     }

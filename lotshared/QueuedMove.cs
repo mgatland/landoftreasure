@@ -8,13 +8,13 @@ namespace lotshared
 {
     public class QueuedMove
     {
-        public int Tick;
+        public long Tick;
         public int X;
         public int Y;
 
         public QueuedMove(long tick, int x, int y)
         {
-            this.Tick = (int)tick; //FIXME cast!
+            this.Tick = tick;
             this.X = x;
             this.Y = y;
         }

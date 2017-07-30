@@ -17,7 +17,7 @@ namespace lotclient
 		private const string hostKey = "landoftreasure";
 
         private const int desiredExtraDelay = 100;
-        private const int maxQueuedMovestoSend = 20;
+        private const int maxQueuedMovestoSend = 40;
         private int extraDelay = desiredExtraDelay;
 
         NetManager client;
@@ -29,6 +29,9 @@ namespace lotclient
 
         int Id;
         List<QueuedMove> queuedMoves = new List<QueuedMove>();
+        private long lastSendTime;
+        private const int clientSendFrequency = 1000 / 20;
+        private long LastAckedClientMove; //this variable isn't actually used, maybe nice for debugging
 
         List<Player> players;
         List<Snapshot> snapshots = new List<Snapshot>();
@@ -122,7 +125,9 @@ namespace lotclient
 
         private void ProcessClientMovementAck(long lastAckedClientMove)
         {
-            queuedMoves.RemoveAll(qm => qm.Tick <= lastAckedClientMove);
+            int removedCount = queuedMoves.RemoveAll(qm => qm.Tick <= lastAckedClientMove);
+            LastAckedClientMove = lastAckedClientMove;
+            //Console.WriteLine("Server acked " + removedCount + " leaving " + queuedMoves.Count + " unacked");
         }
 
 
@@ -144,6 +149,7 @@ namespace lotclient
         protected override void Update(GameTime gameTime)
         {
             long serverTick = calculateServerTick();
+            long localTick = stopwatch.ElapsedMilliseconds;
 
             KeyboardState state = Keyboard.GetState();
 			if (state.IsKeyDown(Keys.Escape))
@@ -160,25 +166,43 @@ namespace lotclient
 			if (state.IsKeyDown(Keys.Down))
 				dY += 4;
 
-            //TODO: check the serverTick hasn't gone backwards
-            //(which might happen if we do weird synchronisation)
-            queuedMoves.Add(new QueuedMove(serverTick, dX, dY));
-
-            if (client.GetFirstPeer() != null)
+            //Make sure the movement server tick is always increasing
+            var moveTick = serverTick;
+            if (queuedMoves.Count > 0 && serverTick <= queuedMoves[queuedMoves.Count - 1].Tick)
             {
-                NetDataWriter writer = new NetDataWriter();
-                writer.Put(Packets.ClientMovement);
-                var count = Math.Min(queuedMoves.Count, maxQueuedMovestoSend);
-                writer.Put(count);
-                for (var i = 0; i < count; i++) {
-                    var qm = queuedMoves[i];
-                    writer.Put(qm.Tick);
-                    writer.Put(qm.X);
-                    writer.Put(qm.Y);
-                }
-                client.GetFirstPeer().Send(writer, SendOptions.Unreliable);
-                client.PollEvents();
+                moveTick = queuedMoves[queuedMoves.Count - 1].Tick + 1;
+                Console.WriteLine("oops, server tick went backwards");
             }
+            queuedMoves.Add(new QueuedMove(moveTick, dX, dY));
+
+
+            if (localTick > lastSendTime + clientSendFrequency)
+            {
+                lastSendTime += clientSendFrequency;
+                //TODO: if we are too far behind, just jump up to the present instead of flooding the server
+                if (client.GetFirstPeer() != null)
+                {
+                    NetDataWriter writer = new NetDataWriter();
+                    writer.Put(Packets.ClientMovement);
+                    var count = Math.Min(queuedMoves.Count, maxQueuedMovestoSend);
+                    writer.Put(count);
+                    long tick = count > 0 ? queuedMoves[0].Tick : 0;
+                    writer.Put(tick);
+                    //Console.Write("Sending ");
+                    for (var i = 0; i < count; i++)
+                    {
+                        var qm = queuedMoves[i];
+                        writer.Put((int)(qm.Tick - tick)); //delta
+                        tick = qm.Tick;
+                        writer.Put((sbyte)qm.X);
+                        writer.Put((sbyte)qm.Y);
+                        //Console.Write(qm.Tick + ",");
+                    }
+                    //Console.WriteLine();
+                    client.GetFirstPeer().Send(writer, SendOptions.Unreliable);
+                }
+            }
+            client.PollEvents();
 
             if (player == null)
             {

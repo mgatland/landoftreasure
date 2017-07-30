@@ -16,10 +16,26 @@ namespace landoftreasure
         public LiteNetLib.NetPeer Peer;
         public long LastAckedMove;
 
+        public int ReplayLatency;
+        private int[] latencyRecords = new int[60];
+        private int latencyI = 0;
+
         public NetPlayer(long peerId, LiteNetLib.NetPeer peer)
         {
             this.PeerId = peerId;
             this.Peer = peer;
+        }
+
+        internal void RecordLatency(int latency)
+        {
+            latencyRecords[latencyI++] = latency;
+            if (latencyI == latencyRecords.Length)
+            {
+                latencyI = 0;
+                Console.WriteLine("Player latency: " + latencyRecords.Max());
+            }
+            //Smooth the replay delay
+            ReplayLatency = (int)(Math.Round(ReplayLatency * 0.7d + latencyRecords.Max() * 0.3d));
         }
     }
 }
