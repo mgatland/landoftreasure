@@ -88,6 +88,13 @@ namespace lotclient
                     serverStartTick = dataReader.GetLong();
                     stopwatch.Restart();
                 }
+                if (packetType == Packets.Ping)
+                {
+                    NetDataWriter writer = new NetDataWriter();
+                    writer.Put(Packets.Pong);
+                    writer.Put(dataReader.GetLong());
+                    client.GetFirstPeer().Send(writer, SendOptions.Unreliable);
+                }
                 if (packetType == Packets.Snapshot)
 				{
                     var snapshot = Snapshot.Deserialize(dataReader);

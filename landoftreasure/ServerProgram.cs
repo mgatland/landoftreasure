@@ -27,6 +27,9 @@ namespace landoftreasure
         private Stopwatch stopwatch = new Stopwatch();
         private long lastStep = 0;
 
+        private long lastPing = 0;
+        private int pingFrequency = 1000 * 10;
+
         public static void Main(string[] args)
         {
             new MainClass().Start();
@@ -72,6 +75,12 @@ namespace landoftreasure
             listener.NetworkReceiveEvent += (peer, reader) => 
             {
                 byte packetType = reader.GetByte();
+                if (packetType==Packets.Pong)
+                {
+                    var pingStart = reader.GetLong();
+                    var lag = stopwatch.ElapsedMilliseconds - pingStart;
+                    Console.WriteLine("Ping: " + lag);
+                }
                 if (packetType==Packets.ClientMovement) {
                     var player = netPlayers.Find(p => p.PeerId == peer.ConnectId);
                     if (player == null)
@@ -126,8 +135,6 @@ namespace landoftreasure
 
         private void Update(NetManager server)
         {
-            var peers = server.GetPeers();
-            NetDataWriter writer = new NetDataWriter();
             if (creatures.Count < 1)
             {
                 SpawnCreature();
@@ -178,6 +185,8 @@ namespace landoftreasure
             //Remove old shots
             shots.RemoveAll(s => s.IsDead(lastStep, maximumLagAllowed));
 
+            NetDataWriter writer = new NetDataWriter();
+
             SendSnapshotUpdates(writer);
             SendShotUpdates(writer);
 
@@ -186,8 +195,23 @@ namespace landoftreasure
 
         private void SendSnapshotUpdates(NetDataWriter writer)
         {
+            var sendPings = false;
+            if (stopwatch.ElapsedMilliseconds > lastPing + pingFrequency)
+            {
+                sendPings = true;
+                lastPing += pingFrequency;
+            }
             foreach (var p in netPlayers)
             {
+                if (sendPings)
+                {
+                    writer.Put(Packets.Ping);
+                    //sending the time instead of an ID is a bit lazy, it means clients could lie about their ping.
+                    writer.Put(stopwatch.ElapsedMilliseconds);
+                    p.Peer.Send(writer, SendOptions.Unreliable);
+                    writer.Reset();
+                }
+
                 Snapshot snapshot = new Snapshot();
                 snapshot.Timestamp = lastStep;
                 snapshot.LastAckedClientMove = p.LastAckedMove;
@@ -201,7 +225,7 @@ namespace landoftreasure
                 }
                 snapshot.Serialize(writer);
                 p.Peer.Send(writer, SendOptions.Unreliable);
-            writer.Reset();
+                writer.Reset();
             }
         }
 
