@@ -1,10 +1,8 @@
 ﻿using System;
 namespace lotshared
 {
-    public class Creature
+    public class Creature: GameObject
     {
-        public int X;
-        public int Y;
         public int Id;
 
         public float angle;

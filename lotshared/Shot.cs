@@ -1,12 +1,10 @@
 ﻿using System;
 namespace lotshared
 {
-    public class Shot
+    public class Shot: GameObject
     {
         public const int LifeSpan = 1000;
         public int Id;
-        public int X;
-		public int Y;
         public byte Type;
         public long SpawnTime;
         public int DirtyTime;
@@ -18,7 +16,7 @@ namespace lotshared
 
         public bool IsDead(long serverTick, int extraTime)
         {
-            return serverTick + extraTime > SpawnTime + LifeSpan;
+            return serverTick > SpawnTime + LifeSpan + extraTime;
         }
 
         internal void Update(long time)
@@ -36,10 +34,8 @@ namespace lotshared
         }
     }
 
-    public class ShotFrame
+    public class ShotFrame: GameObject
     {
-        public int X;
-        public int Y;
         public bool Active;
     }
 }

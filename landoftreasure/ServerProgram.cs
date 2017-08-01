@@ -62,6 +62,7 @@ namespace landoftreasure
                 Console.WriteLine("We got connection: {0}", peer.EndPoint);
                 var netPlayer = new NetPlayer(peer.ConnectId, peer);
                 netPlayer.Player = new Player(NewPlayerId());
+                netPlayer.ClientSimPlayer = new Player(NewPlayerId());
                 netPlayers.Add(netPlayer);
                 players.Add(netPlayer.Player);
                 Console.WriteLine("{0} clients", server.GetPeers().Count());
@@ -96,11 +97,13 @@ namespace landoftreasure
 							tick += reader.GetInt(); //delta
                             sbyte x = reader.GetSByte();
 							sbyte y = reader.GetSByte();
-                            if (tick > player.LastAckedMove && !player.MoveQueue.Any(qm => qm.Tick == tick)) {
-								player.MoveQueue.Add(new QueuedMove(tick, x, y));
+                            if (tick > player.LastAckedMove 
+                            && !player.MoveQueueUnverified.Any(qm => qm.Tick == tick)
+                            && !player.MoveQueueVerified.Any(qm => qm.Tick == tick)) {
+								player.MoveQueueUnverified.Add(new QueuedMove(tick, x, y));
 								//Console.WriteLine("Client Move: " + tick + " vs real time " + lastStep + " with " + count + " move snapshots");
 								//Console.WriteLine("Move lag: " + (lastStep - tick));
-							}
+							} // else dropping duplicate or out-of-order movement
 							if (i == count - 1 && player.LastAckedMove < tick)
 							{
                                 player.LastAckedMove = tick;
@@ -162,24 +165,7 @@ namespace landoftreasure
 
             foreach(var p in netPlayers)
             {
-                //TODO: Collision checks happen in the client's time\reality
-                //TODO: if the player is too far behind, we insert fake movement
-                //  (just standing still) and collision check off that
-
-                //Process any movement that is sufficiently old
-                while (p.MoveQueue.Count > 0)
-                {
-                    int count = 0;
-                    var first = p.MoveQueue[0];
-                    if (first.Tick < lastStep - playerReplayLag) {
-						p.Player.X += first.X;
-						p.Player.Y += first.Y;
-                        p.MoveQueue.RemoveAt(0);
-                        count++;
-                    } else {
-                        break;
-                    }
-                }
+                ProcessPlayerMovement(p);
             }
 
             //Remove old shots
@@ -191,6 +177,52 @@ namespace landoftreasure
             SendShotUpdates(writer);
 
             server.PollEvents();
+        }
+
+        private void ProcessPlayerMovement(NetPlayer p)
+        {
+            //TODO: if the player is too far behind, we insert fake movement
+
+            while (p.MoveQueueUnverified.Count > 0)
+            {
+                var first = p.MoveQueueUnverified[0];
+                p.MoveQueueUnverified.RemoveAt(0);
+                //TODO: check for speed hacks
+
+                //Do collision detection in client time
+                p.ClientSimPlayer.X += first.X;
+                p.ClientSimPlayer.Y += first.Y;
+                CheckCollisions(p.ClientSimPlayer, first.Tick);
+                p.MoveQueueVerified.Add(first);
+            }
+
+            //Publish any movement that is sufficiently old
+            while (p.MoveQueueVerified.Count > 0)
+            {
+                int count = 0;
+                var first = p.MoveQueueVerified[0];
+                if (first.Tick < lastStep - playerReplayLag)
+                {
+                    p.Player.X += first.X;
+                    p.Player.Y += first.Y;
+                    p.MoveQueueVerified.RemoveAt(0);
+                    count++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        private void CheckCollisions(Player clientSimPlayer, long tick)
+        {
+            Shared.UpdateShotsToMoment(shots, tick);
+            bool hit = Shared.CollideShots(shots, clientSimPlayer);
+            if (hit)
+            {
+                Console.WriteLine("A hit!");
+            }
         }
 
         private void SendSnapshotUpdates(NetDataWriter writer)

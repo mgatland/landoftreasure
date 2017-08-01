@@ -280,7 +280,7 @@ namespace lotclient
                 cameraY = player.Y - screenHeight / 2;
             }
 
-            Shared.UpdateShots(shots, serverTick);
+            Shared.UpdateShotsToMoment(shots, serverTick);
             shots.RemoveAll(s => s.IsDead(serverTick, 0));
 
             base.Update(gameTime);

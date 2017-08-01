@@ -11,8 +11,10 @@ namespace landoftreasure
     {
         public long PeerId;
         public Player Player;
+        public Player ClientSimPlayer;
         public Dictionary<int, long> ShotKnowledge = new Dictionary<int, long>(); //shot ID, last update
-        public List<QueuedMove> MoveQueue = new List<QueuedMove>();
+        public List<QueuedMove> MoveQueueUnverified = new List<QueuedMove>();
+        public List<QueuedMove> MoveQueueVerified = new List<QueuedMove>();
         public LiteNetLib.NetPeer Peer;
         public long LastAckedMove;
 
@@ -32,7 +34,7 @@ namespace landoftreasure
             if (latencyI == latencyRecords.Length)
             {
                 latencyI = 0;
-                Console.WriteLine("Player latency: " + latencyRecords.Max());
+                Console.WriteLine("Player latency: " + latencyRecords.Max() + ", queue: " + MoveQueueUnverified.Count + "|" + MoveQueueVerified.Count);
             }
             //Smooth the replay delay
             ReplayLatency = (int)(Math.Round(ReplayLatency * 0.7d + latencyRecords.Max() * 0.3d));

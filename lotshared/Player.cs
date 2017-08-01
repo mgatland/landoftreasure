@@ -1,10 +1,8 @@
 ﻿using System;
 namespace lotshared
 {
-    public class Player
+    public class Player: GameObject
     {
-        public int X;
-        public int Y;
         public int Id;
 
         public Player(int id)
