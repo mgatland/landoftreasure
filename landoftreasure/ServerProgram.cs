@@ -195,6 +195,8 @@ namespace landoftreasure
                 CheckCollisions(p.ClientSimPlayer, first.Tick);
                 p.MoveQueueVerified.Add(first);
             }
+            //Copy health from client version to shared version of player
+            p.Player.Health = p.ClientSimPlayer.Health;
 
             //Publish any movement that is sufficiently old
             while (p.MoveQueueVerified.Count > 0)
@@ -221,7 +223,7 @@ namespace landoftreasure
             bool hit = Shared.CollideShots(shots, clientSimPlayer);
             if (hit)
             {
-                Console.WriteLine("A hit!");
+                clientSimPlayer.Health -= 1;
             }
         }
 

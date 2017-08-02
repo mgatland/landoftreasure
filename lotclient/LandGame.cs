@@ -252,6 +252,8 @@ namespace lotclient
                             players.Add(player);
                         }
                         var cNext = nextSnap.Players.ContainsKey(p.Id) ? nextSnap.Players[p.Id] : p;
+                        player.Health = p.Health;
+                        player.MaxHealth = p.MaxHealth;
                         player.X = (int)Math.Round(p.X * oldAmount + cNext.X * newAmount);
                         player.Y = (int)Math.Round(p.Y * oldAmount + cNext.Y * newAmount);
                     }
@@ -291,11 +293,32 @@ namespace lotclient
             GraphicsDevice.Clear(Color.Cornsilk);
             if (Texture2D == null) return;
             SpriteBatch.Begin();
-            players.ForEach(p => DrawSprite(Texture2D, p.X, p.Y));
-            creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));
+            players.ForEach(p => DrawPlayer(p));
+            creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));         
             shots.ForEach(p => { if (p.ShotFrame.Active) SpriteBatch.Draw(shotTexture, new Vector2(p.ShotFrame.X - cameraX, p.ShotFrame.Y - cameraY), null, Color.White, p.Angle, new Vector2(32, 8), new Vector2(1, 1), SpriteEffects.None, 0f); });
+            players.ForEach(p => DrawHealthBar(p));
             SpriteBatch.End();
             base.Draw(gameTime);
+        }
+
+        private void DrawPlayer(Player p)
+        {
+            DrawSprite(Texture2D, p.X, p.Y);
+        }
+
+        private void DrawHealthBar(Player p)
+        {
+            VertexPositionColor[] vertexData = new VertexPositionColor[4];
+            Vector3 topLeft = new Vector3(p.X - 32 - cameraX, p.Y + 32 - cameraY, 0f);
+            int width = 64 * p.Health / p.MaxHealth;
+            Vector3 topRight = new Vector3(topLeft.X + width, p.Y + 32 - cameraY, 0f);
+            Vector3 bottomLeft = new Vector3(p.X - 32 - cameraX, p.Y + 32 + 16 - cameraY, 0f);
+            Vector3 bottomRight = new Vector3(bottomLeft.X + width, p.Y + 32 + 16 - cameraY, 0f);
+            vertexData[0] = new VertexPositionColor(topLeft, Color.Green);
+            vertexData[1] = new VertexPositionColor(topRight, Color.Green);
+            vertexData[2] = new VertexPositionColor(bottomLeft, Color.Green);
+            vertexData[3] = new VertexPositionColor(bottomRight, Color.Green);
+            GraphicsDevice.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.TriangleStrip, vertexData, 0, 2);
         }
 
         private void DrawSprite(Texture2D texture, int x, int y)
