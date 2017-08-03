@@ -27,6 +27,11 @@ namespace lotclient
         Texture2D creatureTexture;
         Texture2D shotTexture;
 
+        Matrix viewMatrix;
+        Matrix projectionMatrix;
+        BasicEffect basicEffect;
+        GraphicsDeviceManager graphics;
+
         int Id;
         List<QueuedMove> queuedMoves = new List<QueuedMove>();
         private long lastSendTime;
@@ -51,7 +56,7 @@ namespace lotclient
 
         public LandGame()
         {
-            var graphics = new GraphicsDeviceManager(this);
+            graphics = new GraphicsDeviceManager(this);
             graphics.PreferredBackBufferWidth = screenWidth;
             graphics.PreferredBackBufferHeight = screenHeight;
             graphics.IsFullScreen = false;
@@ -63,6 +68,9 @@ namespace lotclient
 
         protected override void Initialize()
         {
+            InitializeTransform();
+            InitializeEffect();
+
             players = new List<Player>();
             creatures = new List<Creature>();
             shots = new List<Shot>();
@@ -128,6 +136,33 @@ namespace lotclient
                 }
             };
             base.Initialize();
+        }
+
+
+        private void InitializeTransform()
+        {
+
+            viewMatrix = Matrix.CreateLookAt(
+                new Vector3(0, 0, 1),
+                Vector3.Zero,
+                Vector3.Up
+                );
+
+            projectionMatrix = Matrix.CreateOrthographicOffCenter(
+                0,
+                (float)graphics.GraphicsDevice.Viewport.Width,
+                (float)graphics.GraphicsDevice.Viewport.Height,
+                0,
+                1.0f, 100.0f);
+        }
+
+        private void InitializeEffect()
+        {
+            basicEffect = new BasicEffect(graphics.GraphicsDevice);
+            basicEffect.VertexColorEnabled = true;
+            basicEffect.View = viewMatrix;
+            basicEffect.Projection = projectionMatrix;
+
         }
 
         private void ProcessClientMovementAck(long lastAckedClientMove)
@@ -296,8 +331,21 @@ namespace lotclient
             players.ForEach(p => DrawPlayer(p));
             creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));         
             shots.ForEach(p => { if (p.ShotFrame.Active) SpriteBatch.Draw(shotTexture, new Vector2(p.ShotFrame.X - cameraX, p.ShotFrame.Y - cameraY), null, Color.White, p.Angle, new Vector2(32, 8), new Vector2(1, 1), SpriteEffects.None, 0f); });
-            players.ForEach(p => DrawHealthBar(p));
             SpriteBatch.End();
+
+            GraphicsDevice.BlendState = BlendState.Opaque;
+            GraphicsDevice.DepthStencilState = DepthStencilState.Default;
+            GraphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;        
+            GraphicsDevice.SamplerStates[0] = SamplerState.LinearWrap;
+            RasterizerState rasterizerState = new RasterizerState();
+            rasterizerState.CullMode = CullMode.None;
+
+                 foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+                players.ForEach(p => DrawHealthBar(p));
+            }
+            
             base.Draw(gameTime);
         }
 
@@ -318,7 +366,7 @@ namespace lotclient
             vertexData[1] = new VertexPositionColor(topRight, Color.Green);
             vertexData[2] = new VertexPositionColor(bottomLeft, Color.Green);
             vertexData[3] = new VertexPositionColor(bottomRight, Color.Green);
-            GraphicsDevice.DrawUserPrimitives<VertexPositionColor>(PrimitiveType.TriangleStrip, vertexData, 0, 2);
+            GraphicsDevice.DrawUserPrimitives(PrimitiveType.TriangleStrip, vertexData, 0, 2);
         }
 
         private void DrawSprite(Texture2D texture, int x, int y)
