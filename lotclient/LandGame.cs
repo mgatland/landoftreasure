@@ -187,7 +187,7 @@ namespace lotclient
         protected override void LoadContent()
         {
             ServerPosMarkerTexture = Content.Load<Texture2D>("content/serverPosMarker.png");
-            PlayerTexture = Content.Load<Texture2D>("content/test.png");
+            PlayerTexture = Content.Load<Texture2D>("content/player.png");
             creatureTexture = Content.Load<Texture2D>("content/creature.png");
             shotTexture = Content.Load<Texture2D>("content/shot.png");
             base.LoadContent();
@@ -392,7 +392,7 @@ namespace lotclient
 
         private void DrawSprite(Texture2D texture, int x, int y)
         {
-            SpriteBatch.Draw(texture, new Vector2(x - cameraX, y - cameraY), null, Color.White, 0f, new Vector2(texture.Width/2,texture.Height/2), 1f, SpriteEffects.None, 0f);
+            SpriteBatch.Draw(texture, new Vector2(x - cameraX, y - cameraY), null, Color.White, 0f, new Vector2(texture.Width/2,texture.Height), 1f, SpriteEffects.None, 0f);
         }
 
         protected override void OnExiting(object sender, EventArgs args)

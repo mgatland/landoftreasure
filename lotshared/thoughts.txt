@@ -9,7 +9,7 @@ To Do:
 Architecture notes:
 
 1. The server sends each client a stream of snapshots, showing the state of the world.
-	(Currently, projectile info is sent separately - it maybe should be combined into the snapshots)
+	(Currently, projectile info is swdent separately - it maybe should be combined into the snapshots)
 2. The client displays events with enough delay that it never catches up with the server updates
 	(this delay should be determined dynamically)
 3. Client movement is sent to the server - along with the server frame it was viewing when it made that move

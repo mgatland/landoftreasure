@@ -124,7 +124,7 @@
     <Content Include="content\serverPosMarker.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="content\test.png">
+    <Content Include="content\player.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="content\creature.png">
