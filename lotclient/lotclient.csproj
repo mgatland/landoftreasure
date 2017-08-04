@@ -121,6 +121,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="content\serverPosMarker.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="content\test.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

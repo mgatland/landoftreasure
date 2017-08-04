@@ -70,7 +70,9 @@ namespace landoftreasure
 				writer.Put(Packets.WelcomeClient);
                 writer.Put(netPlayer.Player.Id);
 				writer.Put(lastStep);
-				peer.Send(writer, SendOptions.ReliableOrdered);
+                writer.Put(netPlayer.Player.X);
+                writer.Put(netPlayer.Player.Y);
+                peer.Send(writer, SendOptions.ReliableOrdered);
             };
 
             listener.NetworkReceiveEvent += (peer, reader) => 
@@ -188,11 +190,7 @@ namespace landoftreasure
                 var first = p.MoveQueueUnverified[0];
                 p.MoveQueueUnverified.RemoveAt(0);
                 //TODO: check for speed hacks
-
-                //Do collision detection in client time
-                p.ClientSimPlayer.X += first.X;
-                p.ClientSimPlayer.Y += first.Y;
-                CheckCollisions(p.ClientSimPlayer, first.Tick);
+                Shared.ProcessMovementAndCollisions(first, p.ClientSimPlayer, shots);
                 p.MoveQueueVerified.Add(first);
             }
             //Copy health from client version to shared version of player
@@ -214,16 +212,6 @@ namespace landoftreasure
                 {
                     break;
                 }
-            }
-        }
-
-        private void CheckCollisions(Player clientSimPlayer, long tick)
-        {
-            Shared.UpdateShotsToMoment(shots, tick);
-            bool hit = Shared.CollideShots(shots, clientSimPlayer);
-            if (hit)
-            {
-                clientSimPlayer.Health -= 1;
             }
         }
 

@@ -51,5 +51,22 @@ namespace lotshared
             }
             return false;
         }
+
+        public static void ProcessMovementAndCollisions(QueuedMove first, Player clientSimPlayer, List<Shot> shots)
+        {
+            clientSimPlayer.X += first.X;
+            clientSimPlayer.Y += first.Y;
+            CheckCollisions(clientSimPlayer, shots, first.Tick);
+        }
+
+        private static void CheckCollisions(Player clientSimPlayer, List<Shot> shots, long tick)
+        {
+            Shared.UpdateShotsToMoment(shots, tick);
+            bool hit = Shared.CollideShots(shots, clientSimPlayer);
+            if (hit)
+            {
+                clientSimPlayer.Health -= 1;
+            }
+        }
     }
 }

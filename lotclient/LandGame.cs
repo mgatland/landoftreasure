@@ -23,7 +23,8 @@ namespace lotclient
         NetManager client;
 
         SpriteBatch SpriteBatch;
-        Texture2D Texture2D;
+        Texture2D ServerPosMarkerTexture;
+        Texture2D PlayerTexture;
         Texture2D creatureTexture;
         Texture2D shotTexture;
 
@@ -94,6 +95,9 @@ namespace lotclient
                 {
                     this.Id = dataReader.GetInt();
                     serverStartTick = dataReader.GetLong();
+                    player = new Player(-1);
+                    player.X = dataReader.GetInt();
+                    player.Y = dataReader.GetInt();
                     stopwatch.Restart();
                 }
                 if (packetType == Packets.Ping)
@@ -182,7 +186,8 @@ namespace lotclient
 
         protected override void LoadContent()
         {
-            Texture2D = Content.Load<Texture2D>("content/test.png");
+            ServerPosMarkerTexture = Content.Load<Texture2D>("content/serverPosMarker.png");
+            PlayerTexture = Content.Load<Texture2D>("content/test.png");
             creatureTexture = Content.Load<Texture2D>("content/creature.png");
             shotTexture = Content.Load<Texture2D>("content/shot.png");
             base.LoadContent();
@@ -190,8 +195,7 @@ namespace lotclient
 
         protected override void Update(GameTime gameTime)
         {
-            long serverTick = calculateServerTick();
-            long localTick = stopwatch.ElapsedMilliseconds;
+            long serverTick = calculateServerTick(); //the time we see on screen, might jump around due to latency
 
             KeyboardState state = Keyboard.GetState();
 			if (state.IsKeyDown(Keys.Escape))
@@ -208,48 +212,12 @@ namespace lotclient
 			if (state.IsKeyDown(Keys.Down))
 				dY += 4;
 
-            //Make sure the movement server tick is always increasing
-            var moveTick = serverTick;
-            if (queuedMoves.Count > 0 && serverTick <= queuedMoves[queuedMoves.Count - 1].Tick)
+            if (player != null)
             {
-                moveTick = queuedMoves[queuedMoves.Count - 1].Tick + 1;
-                Console.WriteLine("oops, server tick went backwards");
-            }
-            queuedMoves.Add(new QueuedMove(moveTick, dX, dY));
-
-
-            if (localTick > lastSendTime + clientSendFrequency)
-            {
-                lastSendTime += clientSendFrequency;
-                //TODO: if we are too far behind, just jump up to the present instead of flooding the server
-                if (client.GetFirstPeer() != null)
-                {
-                    NetDataWriter writer = new NetDataWriter();
-                    writer.Put(Packets.ClientMovement);
-                    var count = Math.Min(queuedMoves.Count, maxQueuedMovestoSend);
-                    writer.Put(count);
-                    long tick = count > 0 ? queuedMoves[0].Tick : 0;
-                    writer.Put(tick);
-                    //Console.Write("Sending ");
-                    for (var i = 0; i < count; i++)
-                    {
-                        var qm = queuedMoves[i];
-                        writer.Put((int)(qm.Tick - tick)); //delta
-                        tick = qm.Tick;
-                        writer.Put((sbyte)qm.X);
-                        writer.Put((sbyte)qm.Y);
-                        //Console.Write(qm.Tick + ",");
-                    }
-                    //Console.WriteLine();
-                    client.GetFirstPeer().Send(writer, SendOptions.Unreliable);
-                }
+                ProcessLocalMovement(serverTick, dX, dY);
+                SendMovementToServer();
             }
             client.PollEvents();
-
-            if (player == null)
-            {
-                player = players.Find(p => p.Id == Id);
-            }
 
             //blend between two snapshots
             var nextSnapIndex = snapshots.FindIndex(shot => shot.Timestamp >= serverTick);
@@ -323,12 +291,57 @@ namespace lotclient
             base.Update(gameTime);
         }
 
+        private void ProcessLocalMovement(long serverTick, sbyte dX, sbyte dY)
+        {
+            var moveTick = serverTick;
+            if (queuedMoves.Count > 0 && serverTick <= queuedMoves[queuedMoves.Count - 1].Tick)
+            {
+                moveTick = queuedMoves[queuedMoves.Count - 1].Tick + 1;
+                Console.WriteLine("oops, server tick went backwards, we'll pretend it went forward");
+            }
+            var newMove = new QueuedMove(moveTick, dX, dY);
+            Shared.ProcessMovementAndCollisions(newMove, player, shots);
+            queuedMoves.Add(newMove);
+        }
+
+        private void SendMovementToServer()
+        {
+            long localTick = stopwatch.ElapsedMilliseconds;
+            if (localTick > lastSendTime + clientSendFrequency)
+            {
+                lastSendTime += clientSendFrequency;
+                //TODO: if we are too far behind, just jump up to the present instead of flooding the server
+                if (client.GetFirstPeer() != null)
+                {
+                    NetDataWriter writer = new NetDataWriter();
+                    writer.Put(Packets.ClientMovement);
+                    var count = Math.Min(queuedMoves.Count, maxQueuedMovestoSend);
+                    writer.Put(count);
+                    long tick = count > 0 ? queuedMoves[0].Tick : 0;
+                    writer.Put(tick);
+                    //Console.Write("Sending ");
+                    for (var i = 0; i < count; i++)
+                    {
+                        var qm = queuedMoves[i];
+                        writer.Put((int)(qm.Tick - tick)); //delta
+                        tick = qm.Tick;
+                        writer.Put((sbyte)qm.X);
+                        writer.Put((sbyte)qm.Y);
+                        //Console.Write(qm.Tick + ",");
+                    }
+                    //Console.WriteLine();
+                    client.GetFirstPeer().Send(writer, SendOptions.Unreliable);
+                }
+            }
+        }
+
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.Cornsilk);
-            if (Texture2D == null) return;
+            if (PlayerTexture == null) return;
             SpriteBatch.Begin();
             players.ForEach(p => DrawPlayer(p));
+            if (player != null) DrawPlayer(player);
             creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));         
             shots.ForEach(p => { if (p.ShotFrame.Active) SpriteBatch.Draw(shotTexture, new Vector2(p.ShotFrame.X - cameraX, p.ShotFrame.Y - cameraY), null, Color.White, p.Angle, new Vector2(32, 8), new Vector2(1, 1), SpriteEffects.None, 0f); });
             SpriteBatch.End();
@@ -340,10 +353,11 @@ namespace lotclient
             RasterizerState rasterizerState = new RasterizerState();
             rasterizerState.CullMode = CullMode.None;
 
-                 foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
             {
                 pass.Apply();
                 players.ForEach(p => DrawHealthBar(p));
+                if (player != null) DrawHealthBar(player);
             }
             
             base.Draw(gameTime);
@@ -351,7 +365,13 @@ namespace lotclient
 
         private void DrawPlayer(Player p)
         {
-            DrawSprite(Texture2D, p.X, p.Y);
+            if (p.Id == this.Id)
+            {
+                DrawSprite(ServerPosMarkerTexture, p.X, p.Y);
+            } else
+            {
+                DrawSprite(PlayerTexture, p.X, p.Y);
+            }
         }
 
         private void DrawHealthBar(Player p)
@@ -362,10 +382,11 @@ namespace lotclient
             Vector3 topRight = new Vector3(topLeft.X + width, p.Y + 32 - cameraY, 0f);
             Vector3 bottomLeft = new Vector3(p.X - 32 - cameraX, p.Y + 32 + 16 - cameraY, 0f);
             Vector3 bottomRight = new Vector3(bottomLeft.X + width, p.Y + 32 + 16 - cameraY, 0f);
-            vertexData[0] = new VertexPositionColor(topLeft, Color.Green);
-            vertexData[1] = new VertexPositionColor(topRight, Color.Green);
-            vertexData[2] = new VertexPositionColor(bottomLeft, Color.Green);
-            vertexData[3] = new VertexPositionColor(bottomRight, Color.Green);
+            var color = (p.Id == this.Id) ? Color.LightGreen : Color.Green;
+            vertexData[0] = new VertexPositionColor(topLeft, color);
+            vertexData[1] = new VertexPositionColor(topRight, color);
+            vertexData[2] = new VertexPositionColor(bottomLeft, color);
+            vertexData[3] = new VertexPositionColor(bottomRight, color);
             GraphicsDevice.DrawUserPrimitives(PrimitiveType.TriangleStrip, vertexData, 0, 2);
         }
 
