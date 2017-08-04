@@ -1,22 +1,20 @@
 ﻿
 To Do:
-
-* player-projectile collisions
-* simulate local player movement
 * player attacks, killing enemies, syncing this
 * later: stop any queue from getting too long.
 
 Architecture notes:
 
 1. The server sends each client a stream of snapshots, showing the state of the world.
-	(Currently, projectile info is swdent separately - it maybe should be combined into the snapshots)
+	(Currently, projectile info is sent separately - it maybe should be combined into the snapshots)
 2. The client displays events with enough delay that it never catches up with the server updates
 	(this delay should be determined dynamically)
-3. Client movement is sent to the server - along with the server frame it was viewing when it made that move
-4. todo: client movement is simulated on the client
-5. todo: the server checks validity of client movement and applies damage from projectiles
-	(later, simulate this all on the client too?)
-6. client movement is added to future snapshots, so other players can see it
+3. The client does local player movement and damage
+4. Client movement is sent to the server - along with the server frame it was viewing when it made that move
+5. todo: the server checks validity of client movement
+6. The server simulates client movement in 'client-time' and applies damage
+7. todo: If this is different from what the client has simulated, tell the client somehow
+8. client movement is added to future snapshots, so other players can see it
 	(this should be delayed enough that it never catches up and stutters)
 
 Notes:
