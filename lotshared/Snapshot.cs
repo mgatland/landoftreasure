@@ -38,6 +38,8 @@ namespace lotshared
                 writer.Put(p.Y);
                 writer.Put(p.Health);
                 writer.Put(p.MaxHealth);
+                writer.Put(p.Charge);
+                writer.Put(p.MaxCharge);
             }
         }
 
@@ -63,6 +65,8 @@ namespace lotshared
                 p.Y = reader.GetInt();
                 p.Health = reader.GetInt();
                 p.MaxHealth = reader.GetInt();
+                p.Charge = reader.GetInt();
+                p.MaxCharge = reader.GetInt();
                 snapshot.Players.Add(p.Id, p);
             }
             return snapshot;

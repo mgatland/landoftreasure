@@ -6,6 +6,9 @@ namespace lotshared
         public int Id;
         public int Health;
         public int MaxHealth;
+        public int Charge;
+        public int MaxCharge;
+
 
         public Player(int id)
         {
@@ -14,6 +17,8 @@ namespace lotshared
             this.Y = 100;
             this.MaxHealth = 100;
             this.Health = 100;
+            this.MaxCharge = 100;
+            this.Charge = 0;
         }
     }
 }

@@ -12,9 +12,9 @@ namespace lotclient
 {
     public class LandGame : Game
     {
-		private const string host = "localhost";
-		private const int hostPort = 9050;
-		private const string hostKey = "landoftreasure";
+        private const string host = "localhost";
+        private const int hostPort = 9050;
+        private const string hostKey = "landoftreasure";
 
         private const int desiredExtraDelay = 100;
         private const int maxQueuedMovestoSend = 40;
@@ -108,35 +108,36 @@ namespace lotclient
                     client.GetFirstPeer().Send(writer, SendOptions.Unreliable);
                 }
                 if (packetType == Packets.Snapshot)
-				{
+                {
                     var snapshot = Snapshot.Deserialize(dataReader);
                     //check it's not a duplicate, or stale
                     if (snapshot.Timestamp > latestSnapshotTimestamp)
                     {
                         latestSnapshotTimestamp = snapshot.Timestamp;
-						snapshots.Add(snapshot);
-						//immediately process the ack
-						ProcessClientMovementAck(snapshot.LastAckedClientMove);   
+                        snapshots.Add(snapshot);
+                        //immediately process the ack
+                        ProcessClientMovementAck(snapshot.LastAckedClientMove);
                     }
-				}
-				if (packetType == Packets.Shot)
-				{
-					int id = dataReader.GetInt();
+                }
+                if (packetType == Packets.Shot)
+                {
+                    int id = dataReader.GetInt();
                     var shot = shots.Find(p => p.Id == id);
-					if (shot == null)
-					{
+                    if (shot == null)
+                    {
                         Debug.WriteLine("Adding shot {0}", id);
-						shot = new Shot();
-						shot.Id = id;
-						shots.Add(shot);
-					}
+                        shot = new Shot();
+                        shot.Id = id;
+                        shots.Add(shot);
+                    }
                     shot.SpawnTime = dataReader.GetLong();
-					shot.X = dataReader.GetInt();
-					shot.Y = dataReader.GetInt();
+                    shot.X = dataReader.GetInt();
+                    shot.Y = dataReader.GetInt();
                     shot.Angle = dataReader.GetFloat();
                 }
-                if (packetType==Packets.Message) {
-                    Debug.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */), "");    
+                if (packetType == Packets.Message)
+                {
+                    Debug.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */), "");
                 }
             };
             base.Initialize();
@@ -198,23 +199,23 @@ namespace lotclient
             long serverTick = calculateServerTick(); //the time we see on screen, might jump around due to latency
 
             KeyboardState state = Keyboard.GetState();
-			if (state.IsKeyDown(Keys.Escape))
-				Exit();
-
-            sbyte dX = 0;
-            sbyte dY = 0;
-			if (state.IsKeyDown(Keys.Right))
-				dX += 4;
-			if (state.IsKeyDown(Keys.Left))
-				dX -= 4;
-			if (state.IsKeyDown(Keys.Up))
-				dY -= 4;
-			if (state.IsKeyDown(Keys.Down))
-				dY += 4;
+            if (state.IsKeyDown(Keys.Escape))
+                Exit();
 
             if (player != null)
             {
-                ProcessLocalMovement(serverTick, dX, dY);
+                sbyte dX = 0;
+                sbyte dY = 0;
+                if (state.IsKeyDown(Keys.Right))
+                    dX += 4;
+                if (state.IsKeyDown(Keys.Left))
+                    dX -= 4;
+                if (state.IsKeyDown(Keys.Up))
+                    dY -= 4;
+                if (state.IsKeyDown(Keys.Down))
+                    dY += 4;
+                var isCharging = state.IsKeyDown(Keys.Space);
+                ProcessLocalMovement(serverTick, dX, dY, isCharging);
                 SendMovementToServer();
             }
             client.PollEvents();
@@ -257,6 +258,8 @@ namespace lotclient
                         var cNext = nextSnap.Players.ContainsKey(p.Id) ? nextSnap.Players[p.Id] : p;
                         player.Health = p.Health;
                         player.MaxHealth = p.MaxHealth;
+                        player.Charge= p.Charge;
+                        player.MaxCharge = p.MaxCharge;
                         player.X = (int)Math.Round(p.X * oldAmount + cNext.X * newAmount);
                         player.Y = (int)Math.Round(p.Y * oldAmount + cNext.Y * newAmount);
                     }
@@ -291,7 +294,7 @@ namespace lotclient
             base.Update(gameTime);
         }
 
-        private void ProcessLocalMovement(long serverTick, sbyte dX, sbyte dY)
+        private void ProcessLocalMovement(long serverTick, sbyte dX, sbyte dY, bool charging)
         {
             var moveTick = serverTick;
             if (queuedMoves.Count > 0 && serverTick <= queuedMoves[queuedMoves.Count - 1].Tick)
@@ -299,7 +302,7 @@ namespace lotclient
                 moveTick = queuedMoves[queuedMoves.Count - 1].Tick + 1;
                 Console.WriteLine("oops, server tick went backwards, we'll pretend it went forward");
             }
-            var newMove = new QueuedMove(moveTick, dX, dY);
+            var newMove = new QueuedMove(moveTick, dX, dY, charging);
             Shared.ProcessMovementAndCollisions(newMove, player, shots);
             queuedMoves.Add(newMove);
         }
@@ -327,6 +330,7 @@ namespace lotclient
                         tick = qm.Tick;
                         writer.Put((sbyte)qm.X);
                         writer.Put((sbyte)qm.Y);
+                        writer.Put(qm.Charging);
                         //Console.Write(qm.Tick + ",");
                     }
                     //Console.WriteLine();
@@ -342,13 +346,13 @@ namespace lotclient
             SpriteBatch.Begin();
             players.ForEach(p => DrawPlayer(p));
             if (player != null) DrawPlayer(player);
-            creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));         
+            creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));
             shots.ForEach(p => { if (p.ShotFrame.Active) SpriteBatch.Draw(shotTexture, new Vector2(p.ShotFrame.X - cameraX, p.ShotFrame.Y - cameraY), null, Color.White, p.Angle, new Vector2(32, 8), new Vector2(1, 1), SpriteEffects.None, 0f); });
             SpriteBatch.End();
 
             GraphicsDevice.BlendState = BlendState.Opaque;
             GraphicsDevice.DepthStencilState = DepthStencilState.Default;
-            GraphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;        
+            GraphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;
             GraphicsDevice.SamplerStates[0] = SamplerState.LinearWrap;
             RasterizerState rasterizerState = new RasterizerState();
             rasterizerState.CullMode = CullMode.None;
@@ -356,10 +360,10 @@ namespace lotclient
             foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
             {
                 pass.Apply();
-                players.ForEach(p => DrawHealthBar(p));
-                if (player != null) DrawHealthBar(player);
+                players.ForEach(p => DrawPlayerBars(p));
+                if (player != null) DrawPlayerBars(player);
             }
-            
+
             base.Draw(gameTime);
         }
 
@@ -368,21 +372,30 @@ namespace lotclient
             if (p.Id == this.Id)
             {
                 DrawSprite(ServerPosMarkerTexture, p.X, p.Y);
-            } else
+            }
+            else
             {
                 DrawSprite(PlayerTexture, p.X, p.Y);
             }
         }
 
-        private void DrawHealthBar(Player p)
+        private void DrawPlayerBars(Player p)
+        {
+            var color = (p.Id == this.Id) ? Color.LightGreen : Color.Green;
+            DrawBar(p.Health, p.MaxHealth, p.X, p.Y, color);
+            var color2 = (p.Id == this.Id) ? Color.LightBlue : Color.Blue;
+            DrawBar(p.Charge, p.MaxCharge, p.X, p.Y + barHeight, color);
+        }
+
+        private const int barHeight = 8;
+        private void DrawBar(int current, int max, int X, int Y, Color color)
         {
             VertexPositionColor[] vertexData = new VertexPositionColor[4];
-            Vector3 topLeft = new Vector3(p.X - 32 - cameraX, p.Y + 32 - cameraY, 0f);
-            int width = 64 * p.Health / p.MaxHealth;
-            Vector3 topRight = new Vector3(topLeft.X + width, p.Y + 32 - cameraY, 0f);
-            Vector3 bottomLeft = new Vector3(p.X - 32 - cameraX, p.Y + 32 + 16 - cameraY, 0f);
-            Vector3 bottomRight = new Vector3(bottomLeft.X + width, p.Y + 32 + 16 - cameraY, 0f);
-            var color = (p.Id == this.Id) ? Color.LightGreen : Color.Green;
+            Vector3 topLeft = new Vector3(X - 32 - cameraX, Y - cameraY, 0f);
+            int width = 64 * current / max;
+            Vector3 topRight = new Vector3(topLeft.X + width, Y - cameraY, 0f);
+            Vector3 bottomLeft = new Vector3(X - 32 - cameraX, Y + barHeight - cameraY, 0f);
+            Vector3 bottomRight = new Vector3(bottomLeft.X + width, Y + barHeight - cameraY, 0f);
             vertexData[0] = new VertexPositionColor(topLeft, color);
             vertexData[1] = new VertexPositionColor(topRight, color);
             vertexData[2] = new VertexPositionColor(bottomLeft, color);
@@ -392,7 +405,7 @@ namespace lotclient
 
         private void DrawSprite(Texture2D texture, int x, int y)
         {
-            SpriteBatch.Draw(texture, new Vector2(x - cameraX, y - cameraY), null, Color.White, 0f, new Vector2(texture.Width/2,texture.Height), 1f, SpriteEffects.None, 0f);
+            SpriteBatch.Draw(texture, new Vector2(x - cameraX, y - cameraY), null, Color.White, 0f, new Vector2(texture.Width / 2, texture.Height), 1f, SpriteEffects.None, 0f);
         }
 
         protected override void OnExiting(object sender, EventArgs args)

@@ -99,10 +99,11 @@ namespace landoftreasure
 							tick += reader.GetInt(); //delta
                             sbyte x = reader.GetSByte();
 							sbyte y = reader.GetSByte();
+                            bool charging = reader.GetBool();
                             if (tick > player.LastAckedMove 
                             && !player.MoveQueueUnverified.Any(qm => qm.Tick == tick)
                             && !player.MoveQueueVerified.Any(qm => qm.Tick == tick)) {
-								player.MoveQueueUnverified.Add(new QueuedMove(tick, x, y));
+								player.MoveQueueUnverified.Add(new QueuedMove(tick, x, y, charging));
 								//Console.WriteLine("Client Move: " + tick + " vs real time " + lastStep + " with " + count + " move snapshots");
 								//Console.WriteLine("Move lag: " + (lastStep - tick));
 							} // else dropping duplicate or out-of-order movement
@@ -193,8 +194,10 @@ namespace landoftreasure
                 Shared.ProcessMovementAndCollisions(first, p.ClientSimPlayer, shots);
                 p.MoveQueueVerified.Add(first);
             }
-            //Copy health from client version to shared version of player
+            //Copy health and charge from client version to shared version of player
+            //TODO: think through whether doing this immediately is bad (it won't be in sync with movement)
             p.Player.Health = p.ClientSimPlayer.Health;
+            p.Player.Charge = p.ClientSimPlayer.Charge;
 
             //Publish any movement that is sufficiently old
             while (p.MoveQueueVerified.Count > 0)

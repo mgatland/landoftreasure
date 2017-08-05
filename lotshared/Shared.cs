@@ -52,11 +52,21 @@ namespace lotshared
             return false;
         }
 
-        public static void ProcessMovementAndCollisions(QueuedMove first, Player clientSimPlayer, List<Shot> shots)
+        public static void ProcessMovementAndCollisions(QueuedMove move, Player clientSimPlayer, List<Shot> shots)
         {
-            clientSimPlayer.X += first.X;
-            clientSimPlayer.Y += first.Y;
-            CheckCollisions(clientSimPlayer, shots, first.Tick);
+            clientSimPlayer.X += move.X;
+            clientSimPlayer.Y += move.Y;
+            CheckCollisions(clientSimPlayer, shots, move.Tick);
+            if (!move.Charging && clientSimPlayer.Charge > 0)
+            {
+                //attack
+                clientSimPlayer.Charge = 0;
+            }
+            if (move.Charging)
+            {
+                clientSimPlayer.Charge++;
+                if (clientSimPlayer.Charge > clientSimPlayer.MaxCharge) clientSimPlayer.Charge = clientSimPlayer.MaxCharge;
+            }
         }
 
         private static void CheckCollisions(Player clientSimPlayer, List<Shot> shots, long tick)
