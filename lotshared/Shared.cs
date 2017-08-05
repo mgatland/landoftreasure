@@ -39,17 +39,18 @@ namespace lotshared
             }
         }
 
-        public static bool CollideShots(List<Shot> shots, Player player)
+        public static List<int> CollideShots(List<Shot> shots, Player player)
         {
+            List<int> hits = new List<int>();
             foreach (var shot in shots)
             {
                 if (shot.ShotFrame.Active)
                 {
                     int distance = Distance(shot.ShotFrame, player);
-                    if (distance < 64) return true;
+                    if (distance < 64) hits.Add(shot.Id);
                 }
             }
-            return false;
+            return hits;
         }
 
         public static void ProcessMovementAndCollisions(QueuedMove move, Player clientSimPlayer, List<Shot> shots)
@@ -72,8 +73,8 @@ namespace lotshared
         private static void CheckCollisions(Player clientSimPlayer, List<Shot> shots, long tick)
         {
             Shared.UpdateShotsToMoment(shots, tick);
-            bool hit = Shared.CollideShots(shots, clientSimPlayer);
-            if (hit)
+            List<int> hits = Shared.CollideShots(shots, clientSimPlayer);
+            if (hits.Count > 0)
             {
                 clientSimPlayer.Health -= 1;
             }

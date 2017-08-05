@@ -1,6 +1,6 @@
 ﻿
 To Do:
-* player attacks, killing enemies, syncing this
+* player attack hurts enemies (server side only)
 * later: stop any queue from getting too long.
 
 Architecture notes:
