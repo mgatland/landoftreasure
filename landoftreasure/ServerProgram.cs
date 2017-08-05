@@ -191,7 +191,7 @@ namespace landoftreasure
                 var first = p.MoveQueueUnverified[0];
                 p.MoveQueueUnverified.RemoveAt(0);
                 //TODO: check for speed hacks
-                Shared.ProcessMovementAndCollisions(first, p.ClientSimPlayer, shots);
+                Shared.ProcessMovementAndCollisions(first, p.ClientSimPlayer, shots, p.PreviousHits);
                 p.MoveQueueVerified.Add(first);
             }
             //Copy health and charge from client version to shared version of player

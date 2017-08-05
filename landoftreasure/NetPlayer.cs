@@ -13,6 +13,7 @@ namespace landoftreasure
         public Player Player;
         public Player ClientSimPlayer;
         public Dictionary<int, long> ShotKnowledge = new Dictionary<int, long>(); //shot ID, last update
+        public List<int> PreviousHits = new List<int>();
         public List<QueuedMove> MoveQueueUnverified = new List<QueuedMove>();
         public List<QueuedMove> MoveQueueVerified = new List<QueuedMove>();
         public LiteNetLib.NetPeer Peer;

@@ -35,6 +35,7 @@ namespace lotclient
 
         int Id;
         List<QueuedMove> queuedMoves = new List<QueuedMove>();
+        List<int> previousHits = new List<int>();
         private long lastSendTime;
         private const int clientSendFrequency = 1000 / 20;
         private long LastAckedClientMove; //this variable isn't actually used, maybe nice for debugging
@@ -303,7 +304,7 @@ namespace lotclient
                 Console.WriteLine("oops, server tick went backwards, we'll pretend it went forward");
             }
             var newMove = new QueuedMove(moveTick, dX, dY, charging);
-            Shared.ProcessMovementAndCollisions(newMove, player, shots);
+            Shared.ProcessMovementAndCollisions(newMove, player, shots, previousHits);
             queuedMoves.Add(newMove);
         }
 

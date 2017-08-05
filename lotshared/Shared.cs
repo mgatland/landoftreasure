@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace lotshared
 {
@@ -39,7 +40,7 @@ namespace lotshared
             }
         }
 
-        public static List<int> CollideShots(List<Shot> shots, Player player)
+        private static List<int> CollideShots(List<Shot> shots, Player player)
         {
             List<int> hits = new List<int>();
             foreach (var shot in shots)
@@ -53,11 +54,11 @@ namespace lotshared
             return hits;
         }
 
-        public static void ProcessMovementAndCollisions(QueuedMove move, Player clientSimPlayer, List<Shot> shots)
+        public static void ProcessMovementAndCollisions(QueuedMove move, Player clientSimPlayer, List<Shot> shots, List<int> previousHits)
         {
             clientSimPlayer.X += move.X;
             clientSimPlayer.Y += move.Y;
-            CheckCollisions(clientSimPlayer, shots, move.Tick);
+            CheckCollisions(clientSimPlayer, shots, previousHits, move.Tick);
             if (!move.Charging && clientSimPlayer.Charge > 0)
             {
                 //attack
@@ -70,14 +71,16 @@ namespace lotshared
             }
         }
 
-        private static void CheckCollisions(Player clientSimPlayer, List<Shot> shots, long tick)
+        private static void CheckCollisions(Player clientSimPlayer, List<Shot> shots, List<int> previousHits, long tick)
         {
             Shared.UpdateShotsToMoment(shots, tick);
             List<int> hits = Shared.CollideShots(shots, clientSimPlayer);
-            if (hits.Count > 0)
-            {
-                clientSimPlayer.Health -= 1;
+            //hits that were not on our previous hits list
+            foreach(var hit in hits.Except(previousHits)) {
+                clientSimPlayer.Health -= 10;
             }
+            previousHits.Clear();
+            previousHits.AddRange(hits);
         }
     }
 }
