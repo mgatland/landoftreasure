@@ -27,6 +27,7 @@ namespace lotclient
         Texture2D PlayerTexture;
         Texture2D creatureTexture;
         Texture2D shotTexture;
+        Texture2D ringTexture;
 
         Matrix viewMatrix;
         Matrix projectionMatrix;
@@ -55,6 +56,8 @@ namespace lotclient
 
         private Stopwatch stopwatch = new Stopwatch();
         private long serverStartTick;
+
+        private int maxAttackRange = 800;
 
         public LandGame()
         {
@@ -192,6 +195,7 @@ namespace lotclient
             PlayerTexture = Content.Load<Texture2D>("content/player.png");
             creatureTexture = Content.Load<Texture2D>("content/creature.png");
             shotTexture = Content.Load<Texture2D>("content/shot.png");
+            ringTexture = Content.Load<Texture2D>("content/ring.png");
             base.LoadContent();
         }
 
@@ -349,6 +353,9 @@ namespace lotclient
             if (player != null) DrawPlayer(player);
             creatures.ForEach(p => DrawSprite(creatureTexture, p.X, p.Y));
             shots.ForEach(p => { if (p.ShotFrame.Active) SpriteBatch.Draw(shotTexture, new Vector2(p.ShotFrame.X - cameraX, p.ShotFrame.Y - cameraY), null, Color.White, p.Angle, new Vector2(32, 8), new Vector2(1, 1), SpriteEffects.None, 0f); });
+
+            if (player != null) DrawAttackRing();
+
             SpriteBatch.End();
 
             GraphicsDevice.BlendState = BlendState.Opaque;
@@ -366,6 +373,15 @@ namespace lotclient
             }
 
             base.Draw(gameTime);
+        }
+
+        private void DrawAttackRing()
+        {
+            var x = player.X;
+            var y = player.Y;
+            var attackRange = 1f * maxAttackRange * player.Charge / player.MaxCharge;
+            var scale = attackRange *1f / ringTexture.Width;
+            SpriteBatch.Draw(ringTexture, new Vector2(x - cameraX, y - cameraY), null, Color.White, 0f, new Vector2(ringTexture.Width / 2, ringTexture.Height / 2), scale, SpriteEffects.None, 0f);
         }
 
         private void DrawPlayer(Player p)
