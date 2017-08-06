@@ -41,5 +41,6 @@ flags:
 
 Enemies can fire: straight at players, or prediction-aimed
 
-
 http://www.pfiffel.com/dps/
+
+ROTMG has around 800 enemy types
