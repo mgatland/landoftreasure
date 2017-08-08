@@ -57,8 +57,6 @@ namespace lotclient
         private Stopwatch stopwatch = new Stopwatch();
         private long serverStartTick;
 
-        private int maxAttackRange = 800;
-
         public LandGame()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -240,6 +238,11 @@ namespace lotclient
                     foreach (var c in lastSnap.Creatures.Values)
                     {
                         var creature = creatures.Find(p => p.Id == c.Id);
+                        if (c.Status == CreatureStatus.Dead)
+                        {
+                            if (creature != null) creatures.Remove(creature);
+                            continue;
+                        }
                         if (creature == null)
                         {
                             Debug.WriteLine("Adding creature {0}", c.Id);
@@ -250,6 +253,7 @@ namespace lotclient
                         var cNext = nextSnap.Creatures.ContainsKey(c.Id) ? nextSnap.Creatures[c.Id] : c;
                         creature.X = (int)Math.Round(c.X * oldAmount + cNext.X * newAmount);
                         creature.Y = (int)Math.Round(c.Y * oldAmount + cNext.Y * newAmount);
+                        creature.Status = c.Status;
                     }
                     foreach (var p in lastSnap.Players.Values)
                     {
@@ -309,6 +313,7 @@ namespace lotclient
             }
             var newMove = new QueuedMove(moveTick, dX, dY, charging);
             Shared.ProcessMovementAndCollisions(newMove, player, shots, previousHits);
+            Shared.ProcessPlayerAttackCharge(newMove, player);
             queuedMoves.Add(newMove);
         }
 
@@ -379,8 +384,8 @@ namespace lotclient
         {
             var x = player.X;
             var y = player.Y;
-            var attackRange = 1f * maxAttackRange * player.Charge / player.MaxCharge;
-            var scale = attackRange *1f / ringTexture.Width;
+            var attackRange = 1f * Shared.MaxPlayerAttackRange * player.Charge / player.MaxCharge;
+            var scale = attackRange *2f / ringTexture.Width;
             SpriteBatch.Draw(ringTexture, new Vector2(x - cameraX, y - cameraY), null, Color.White, 0f, new Vector2(ringTexture.Width / 2, ringTexture.Height / 2), scale, SpriteEffects.None, 0f);
         }
 

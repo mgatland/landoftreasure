@@ -30,6 +30,7 @@ namespace lotshared
                 writer.Put(c.Id);
                 writer.Put(c.X);
                 writer.Put(c.Y);
+                writer.Put((byte)c.Status);
             }
             foreach (var p in Players.Values)
             {
@@ -56,6 +57,7 @@ namespace lotshared
                 c.Id = reader.GetInt();
                 c.X = reader.GetInt();
                 c.Y = reader.GetInt();
+                c.Status = (CreatureStatus)reader.GetByte();
                 snapshot.Creatures.Add(c.Id, c);
             }
             for (var i = 0; i < pCount; i++)

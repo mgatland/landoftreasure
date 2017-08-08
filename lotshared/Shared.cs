@@ -6,6 +6,8 @@ namespace lotshared
 {
     public static class Shared
     {
+        public static int MaxPlayerAttackRange = 200;
+
         public static Player FindClosestPlayer(Creature c, List<Player> players)
         {
             int bestDistance = int.MaxValue;
@@ -59,9 +61,15 @@ namespace lotshared
             clientSimPlayer.X += move.X;
             clientSimPlayer.Y += move.Y;
             CheckCollisions(clientSimPlayer, shots, previousHits, move.Tick);
+        }
+
+        public static AttackState ProcessPlayerAttackCharge(QueuedMove move, Player clientSimPlayer)
+        {
+            AttackState result = null;
             if (!move.Charging && clientSimPlayer.Charge > 0)
             {
                 //attack
+                result = new AttackState(Shared.MaxPlayerAttackRange*clientSimPlayer.Charge/clientSimPlayer.MaxCharge);
                 clientSimPlayer.Charge = 0;
             }
             if (move.Charging)
@@ -69,6 +77,7 @@ namespace lotshared
                 clientSimPlayer.Charge++;
                 if (clientSimPlayer.Charge > clientSimPlayer.MaxCharge) clientSimPlayer.Charge = clientSimPlayer.MaxCharge;
             }
+            return result;
         }
 
         private static void CheckCollisions(Player clientSimPlayer, List<Shot> shots, List<int> previousHits, long tick)

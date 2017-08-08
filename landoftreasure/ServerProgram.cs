@@ -141,27 +141,30 @@ namespace landoftreasure
 
         private void Update(NetManager server)
         {
-            if (creatures.Count < 1)
+            if (creatures.Count < 5)
             {
                 SpawnCreature();
             }
             foreach (var creature in creatures)
             {
-                creature.angle += 0.09f;
-                if (creature.angle > Math.PI * 2) creature.angle -= (float)(Math.PI * 2);
-
-                creature.X += (int)(Math.Sin(creature.angle) * 16);
-                creature.Y += (int)(Math.Cos(creature.angle) * 16);
-
-                creature.timer++;
-                if (creature.timer >= 60)
+                if (creature.Status != CreatureStatus.Dead)
                 {
-                    Player target = Shared.FindClosestPlayer(creature, players);
-                    if (target != null)
+                    creature.angle += 0.09f;
+                    if (creature.angle > Math.PI * 2) creature.angle -= (float)(Math.PI * 2);
+
+                    creature.X += (int)(Math.Sin(creature.angle) * 16);
+                    creature.Y += (int)(Math.Cos(creature.angle) * 16);
+
+                    creature.timer++;
+                    if (creature.timer >= 60)
                     {
-                        float angle = Shared.AngleFromTo(creature, target);
-                        creature.timer = 0;
-                        SpawnShot(creature, angle);
+                        Player target = Shared.FindClosestPlayer(creature, players);
+                        if (target != null)
+                        {
+                            float angle = Shared.AngleFromTo(creature, target);
+                            creature.timer = 0;
+                            SpawnShot(creature, angle);
+                        }
                     }
                 }
             }
@@ -170,6 +173,9 @@ namespace landoftreasure
             {
                 ProcessPlayerMovement(p);
             }
+
+            //Remove old creatures
+            creatures.RemoveAll(c => c.IsDead(lastStep, maximumLagAllowed));
 
             //Remove old shots
             shots.RemoveAll(s => s.IsDead(lastStep, maximumLagAllowed));
@@ -188,11 +194,16 @@ namespace landoftreasure
 
             while (p.MoveQueueUnverified.Count > 0)
             {
-                var first = p.MoveQueueUnverified[0];
+                var move = p.MoveQueueUnverified[0];
                 p.MoveQueueUnverified.RemoveAt(0);
-                //TODO: check for speed hacks
-                Shared.ProcessMovementAndCollisions(first, p.ClientSimPlayer, shots, p.PreviousHits);
-                p.MoveQueueVerified.Add(first);
+                //TODO: check for speed hacks etc
+                Shared.ProcessMovementAndCollisions(move, p.ClientSimPlayer, shots, p.PreviousHits);
+                var attackState = Shared.ProcessPlayerAttackCharge(move, p.ClientSimPlayer);
+                if (attackState != null)
+                {
+                    PlayerAttack(p.ClientSimPlayer, attackState.Radius);
+                }
+                p.MoveQueueVerified.Add(move);
             }
             //Copy health and charge from client version to shared version of player
             //TODO: think through whether doing this immediately is bad (it won't be in sync with movement)
@@ -214,6 +225,20 @@ namespace landoftreasure
                 else
                 {
                     break;
+                }
+            }
+        }
+
+        //Warning: this uses the Client-position player to attack server-position enemies... you could miss.
+        private void PlayerAttack(GameObject pos, int radius)
+        {
+            foreach(var c in creatures)
+            {
+                var distance = Shared.Distance(c, pos);
+                if (distance < radius)
+                {
+                    c.Status = CreatureStatus.Dead;
+                    c.DeadTick = lastStep;
                 }
             }
         }
@@ -301,8 +326,8 @@ namespace landoftreasure
         private void SpawnCreature()
         {
             var creature = new Creature();
-            creature.X = 0 + random.Next(20);
-            creature.Y = 0 + random.Next(20);
+            creature.X = 0 + random.Next(300);
+            creature.Y = 0 + random.Next(300);
             creature.Id = NewCreatureId();
             creatures.Add(creature);
         }
