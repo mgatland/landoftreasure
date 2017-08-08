@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="AttackState.cs" />
     <Compile Include="CreatureStatus.cs" />
+    <Compile Include="CreatureType.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="Packets.cs" />
@@ -52,6 +53,7 @@
     <Compile Include="Shared.cs" />
     <Compile Include="Snapshot.cs" />
     <Compile Include="QueuedMove.cs" />
+    <Compile Include="World.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thoughts.txt" />

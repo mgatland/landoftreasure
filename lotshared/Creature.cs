@@ -4,6 +4,9 @@ namespace lotshared
     public class Creature: GameObject
     {
         public int Id;
+        public short Type = 0; //server only (for now)
+        public byte State = 0; //server only
+        public short StateTimer = 0; //server only
         public float angle;
         public int timer;
         public CreatureStatus Status = CreatureStatus.Alive;

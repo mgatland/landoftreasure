@@ -44,3 +44,8 @@ Enemies can fire: straight at players, or prediction-aimed
 http://www.pfiffel.com/dps/
 
 ROTMG has around 800 enemy types
+
+ROTMG enemy scripts have states with transitions. Inside a state are behaviours:
+* shoot, range:3, cooldown:2.5
+* follow, range:1, speed: 0.85
+* wander, speed:0.4,

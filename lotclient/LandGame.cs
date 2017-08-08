@@ -351,7 +351,7 @@ namespace lotclient
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.Cornsilk);
+            GraphicsDevice.Clear(Color.AliceBlue);
             if (PlayerTexture == null) return;
             SpriteBatch.Begin();
             players.ForEach(p => DrawPlayer(p));

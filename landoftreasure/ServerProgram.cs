@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace landoftreasure
 {
-    class MainClass
+    class MainClass: World
     {
         private const int MaxClients = 20;
         private const int Port = 9050;
@@ -18,10 +18,15 @@ namespace landoftreasure
         private const int maximumLagAllowed = 1000;
         private const int playerReplayLag = maximumLagAllowed; //probably must be tuned per player based on their lag
 
+        private CreatureType[] creatureTypes;
+
         private List<NetPlayer> netPlayers;
         private List<Player> players;
         private List<Creature> creatures;
         List<Shot> shots;
+
+        //public cos is passed to CreatureType... should tidy up into a subclass
+        public List<Player> Players { get { return players; } }
 
         private Random random = new Random();
         private Stopwatch stopwatch = new Stopwatch();
@@ -38,6 +43,9 @@ namespace landoftreasure
         private void Start()
         {
             Console.WriteLine("Starting game server…");
+
+            creatureTypes = new CreatureType[1];
+            creatureTypes[0] = new CreatureType();
 
             stopwatch.Start();
             netPlayers = new List<NetPlayer>();
@@ -141,32 +149,13 @@ namespace landoftreasure
 
         private void Update(NetManager server)
         {
-            if (creatures.Count < 5)
+            if (creatures.Count < 6)
             {
                 SpawnCreature();
             }
             foreach (var creature in creatures)
             {
-                if (creature.Status != CreatureStatus.Dead)
-                {
-                    creature.angle += 0.09f;
-                    if (creature.angle > Math.PI * 2) creature.angle -= (float)(Math.PI * 2);
-
-                    creature.X += (int)(Math.Sin(creature.angle) * 16);
-                    creature.Y += (int)(Math.Cos(creature.angle) * 16);
-
-                    creature.timer++;
-                    if (creature.timer >= 60)
-                    {
-                        Player target = Shared.FindClosestPlayer(creature, players);
-                        if (target != null)
-                        {
-                            float angle = Shared.AngleFromTo(creature, target);
-                            creature.timer = 0;
-                            SpawnShot(creature, angle);
-                        }
-                    }
-                }
+                    UpdateCreature(creature);
             }
 
             foreach(var p in netPlayers)
@@ -186,6 +175,14 @@ namespace landoftreasure
             SendShotUpdates(writer);
 
             server.PollEvents();
+        }
+
+        private void UpdateCreature(Creature creature)
+        {
+            if (creature.Status != CreatureStatus.Dead)
+            {
+                creatureTypes[creature.Type].Update(creature, this);
+            }
         }
 
         private void ProcessPlayerMovement(NetPlayer p)
@@ -312,7 +309,8 @@ namespace landoftreasure
             }
         }
 
-        private void SpawnShot(Creature creature, float angle)
+        //public cos is passed to CreatureType... should tidy up into a subclass
+        public void SpawnShot(Creature creature, float angle)
         {
             var shot = new Shot();
             shot.X = creature.X;
@@ -329,6 +327,8 @@ namespace landoftreasure
             creature.X = 0 + random.Next(300);
             creature.Y = 0 + random.Next(300);
             creature.Id = NewCreatureId();
+            creature.Type = 0;
+            creatureTypes[creature.Type].Start(creature);
             creatures.Add(creature);
         }
 
@@ -343,7 +343,8 @@ namespace landoftreasure
 			return lastCreatureId++;
 		}
 		private int lastPlayerId;
-		private int NewPlayerId()
+
+        private int NewPlayerId()
 		{
 			return lastPlayerId++;
 		}
