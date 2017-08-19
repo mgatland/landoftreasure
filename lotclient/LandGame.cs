@@ -209,13 +209,13 @@ namespace lotclient
             {
                 sbyte dX = 0;
                 sbyte dY = 0;
-                if (state.IsKeyDown(Keys.Right))
+                if (state.IsKeyDown(Keys.Right) || state.IsKeyDown(Keys.D))
                     dX += 4;
-                if (state.IsKeyDown(Keys.Left))
+                if (state.IsKeyDown(Keys.Left) || state.IsKeyDown(Keys.A))
                     dX -= 4;
-                if (state.IsKeyDown(Keys.Up))
+                if (state.IsKeyDown(Keys.Up) || state.IsKeyDown(Keys.W))
                     dY -= 4;
-                if (state.IsKeyDown(Keys.Down))
+                if (state.IsKeyDown(Keys.Down) || state.IsKeyDown(Keys.S))
                     dY += 4;
                 var isCharging = state.IsKeyDown(Keys.Space);
                 ProcessLocalMovement(serverTick, dX, dY, isCharging);
