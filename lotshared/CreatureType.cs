@@ -13,7 +13,7 @@ namespace lotshared
         private int chargeDistance = 300;
         private int desiredDistance = 150;
         private int speed = 8;
-        private int dodgeTime = 16;
+        private int dodgeTime = 4;
         private int RefireDelay = 30;
 
         public void Start(Creature creature)
